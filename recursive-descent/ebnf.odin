@@ -1,6 +1,7 @@
 package recurse
 
 import "core:fmt"
+import "core:strings"
 import "core:unicode"
 
 EBNF_Grammar := `
@@ -230,8 +231,54 @@ parse :: proc(source: string) -> Grammar {
   }
 }
 
+tprint_factor :: proc(factor: Factor) -> string {
+  switch factor.type {
+    case .Identifier: return factor.value.(string)
+    case .Literal:    return fmt.tprintf("\"%s\"", factor.value.(string))
+    case .Grouping:   return fmt.tprintf("(%s)",   tprint(factor.value.(Expression)))
+    case .Optional:   return fmt.tprintf("[%s]",   tprint(factor.value.(Expression)))
+    case .Repetition: return fmt.tprintf("{{%s}}", tprint(factor.value.(Expression)))
+  } 
+  return ""
+}
+
+tprint_term :: proc(term: Term) -> string {
+  factors_str := make([dynamic]string)
+  defer delete(factors_str)
+
+  for factor in term.factors {
+    append(&factors_str, tprint(factor))
+  }
+  return strings.join(factors_str[:], " ")
+}
+
+tprint_expression :: proc(expr: Expression) -> string {
+  terms_str := make([dynamic]string)
+  defer delete(terms_str)
+
+  for term in expr.terms {
+    append(&terms_str, tprint(term))
+  }
+  return strings.join(terms_str[:], " | ")
+}
+
+tprint_production :: proc(production: Production) -> string {
+  return fmt.tprintf("%s = %s.", production.name, tprint(production.expr)) 
+}
+
+tprint_grammar :: proc(grammar: Grammar) -> string {
+  productions_str := make([dynamic]string)
+  defer delete(productions_str)
+
+  for production in grammar.productions {
+    append(&productions_str, tprint(production))
+  }
+  return strings.join(productions_str[:], "\n")
+}
+
+tprint :: proc{ tprint_grammar, tprint_production, tprint_expression, tprint_term, tprint_factor }
+
 run_ebnf :: proc() {
-  //grammar := parse("lang = \"Odin\".")
   grammar := parse(EBNF_Grammar)
-  fmt.printf("%#v\n", grammar)
+  fmt.println(tprint(grammar))
 }
