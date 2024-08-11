@@ -5,34 +5,43 @@ import "core:mem"
 import "core:strings"
 import "core:unicode"
 
-EBNF_Grammar := `
-    syntax     = {production}.
-    production = identifier "=" expression ".".
-    expression = term {"|" term}.
-    term       = factor {factor}.
-    factor     = identifier | literal | "(" expression ")" | "[" expression "]" | "{" expression "}".
+EBNF_Grammar :: `
+  syntax     = {production}.
+  production = identifier "=" expression ".".
+  expression = term {"|" term}.
+  term       = factor {factor}.
+  factor     = identifier | literal | "(" expression ")" | "[" expression "]" | "{" expression "}".
 `
+
+Node_Location :: struct {
+  start: Source_Location,
+  end:   Source_Location
+}
 
 Grammar :: struct {
   productions: [dynamic]Production
 }
 
 Production :: struct {
+  loc: Node_Location,
   name: string,
-  expr: Expression,
+  expr: Expression
 }
 
 Expression :: struct {
+  loc: Node_Location,
   terms: [dynamic]Term
 }
 
 Term :: struct {
-  factors: [dynamic]Factor,
+  loc: Node_Location,
+  factors: [dynamic]Factor
 }
 
 Factor_Type :: enum{ Identifier, Literal, Optional, Repetition, Grouping }
 
 Factor :: struct {
+  loc: Node_Location,
   type: Factor_Type,
   value: union { string, Expression },
 }
@@ -146,7 +155,7 @@ expect :: proc(expected_symbol: Symbol) {
 }
 
 parse_factor :: proc(allocator := context.allocator) -> Factor {
-  factor: Factor
+  factor := Factor{ loc=Node_Location{ start=parser.loc } }
   #partial switch parser.sym {
     case .Identifier:
       factor = Factor{
@@ -185,36 +194,46 @@ parse_factor :: proc(allocator := context.allocator) -> Factor {
       error(fmt.tprintf("Unexpected symbol: %s", parser.sym))
   }
 
+  factor.loc.end = parser.loc
   return factor
 }
 
 parse_term :: proc(allocator := context.allocator) -> Term {
+  loc := Node_Location{ start=parser.loc }
   factors := make([dynamic]Factor, allocator)
   append(&factors, parse_factor(allocator))
   for parser.sym < .Bar {
     append(&factors, parse_factor(allocator))
   }
-  return Term{ factors=factors }
+
+  loc.end = parser.loc
+  return Term{ factors=factors, loc=loc }
 }
 
 parse_expression :: proc(allocator := context.allocator) -> Expression {
+  loc := Node_Location{ start=parser.loc }
   terms := make([dynamic]Term, allocator)
   append(&terms, parse_term(allocator))
   for parser.sym == .Bar {
     get_symbol()
     append(&terms, parse_term(allocator))
   }
-  return Expression{terms=terms}
+
+  loc.end = parser.loc
+  return Expression{ terms=terms, loc=loc }
 }
 
 parse_production :: proc(allocator := context.allocator) -> Production {
+  loc  := Node_Location{ start=parser.loc }
   name := parser.ident
+
   get_symbol()
   expect(.Equal)
   expr := parse_expression(allocator)
   expect(.Period)
 
-  return Production{name=name, expr=expr}
+  loc.end = parser.loc
+  return Production{name=name, expr=expr, loc=loc}
 }
 
 parse :: proc(source: string, allocator := context.allocator) -> Grammar {
@@ -301,7 +320,7 @@ tprint_grammar :: proc(grammar: Grammar, allocator := context.allocator) -> stri
 tprint :: proc{ tprint_grammar, tprint_production, tprint_expression, tprint_term, tprint_factor }
 
 run_ebnf :: proc() {
-  arena_buffer := make([dynamic]u8, 512 * mem.Kilobyte)
+  arena_buffer := make([dynamic]u8, 4 * mem.Megabyte)
   defer delete(arena_buffer)
   arena: mem.Arena
   mem.arena_init(&arena, arena_buffer[:])
