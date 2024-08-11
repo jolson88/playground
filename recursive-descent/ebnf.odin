@@ -280,14 +280,15 @@ tprint_grammar :: proc(grammar: Grammar, allocator := context.allocator) -> stri
 tprint :: proc{ tprint_grammar, tprint_production, tprint_expression, tprint_term, tprint_factor }
 
 run_ebnf :: proc() {
-  arena_buffer := make([dynamic]u8, mem.Megabyte)
+  arena_buffer := make([dynamic]u8, 512 * mem.Kilobyte)
   defer delete(arena_buffer)
-
   arena: mem.Arena
   mem.arena_init(&arena, arena_buffer[:])
   arena_allocator := mem.arena_allocator(&arena)
 
   grammar := parse(EBNF_Grammar, arena_allocator)
-  fmt.println(tprint(grammar, arena_allocator))
+  serialized_grammar := tprint(grammar, arena_allocator)
+
+  fmt.println(serialized_grammar)
   fmt.printf("\nPeak used memory: %fKB\n", f32(arena.peak_used) / 1024)
 }
