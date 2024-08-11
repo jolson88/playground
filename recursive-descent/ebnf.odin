@@ -1,6 +1,7 @@
 package recurse
 
 import "core:fmt"
+import "core:mem"
 import "core:strings"
 import "core:unicode"
 
@@ -133,7 +134,7 @@ expect :: proc(expected_symbol: Symbol) {
   }
 }
 
-parse_factor :: proc() -> Factor {
+parse_factor :: proc(allocator := context.allocator) -> Factor {
   factor: Factor
   #partial switch parser.symbol {
     case .Identifier:
@@ -152,21 +153,21 @@ parse_factor :: proc() -> Factor {
       get_symbol()
       factor = Factor{
         type = .Grouping,
-        value = parse_expression()
+        value = parse_expression(allocator)
       }
       expect(.Right_Paren)
     case .Left_Bracket:
       get_symbol()
       factor = Factor{
         type = .Optional,
-        value = parse_expression()
+        value = parse_expression(allocator)
       }
       expect(.Right_Bracket)
     case .Left_Brace:
       get_symbol()
       factor = Factor{
         type = .Repetition,
-        value = parse_expression()
+        value = parse_expression(allocator)
       }
       expect(.Right_Brace)
     case:
@@ -176,41 +177,41 @@ parse_factor :: proc() -> Factor {
   return factor
 }
 
-parse_term :: proc() -> Term {
-  factors := make([dynamic]Factor)
-  append(&factors, parse_factor())
+parse_term :: proc(allocator := context.allocator) -> Term {
+  factors := make([dynamic]Factor, allocator)
+  append(&factors, parse_factor(allocator))
   for parser.symbol < .Bar {
-    append(&factors, parse_factor())
+    append(&factors, parse_factor(allocator))
   }
   return Term{ factors=factors }
 }
 
-parse_expression :: proc() -> Expression {
-  terms := make([dynamic]Term)
-  append(&terms, parse_term())
+parse_expression :: proc(allocator := context.allocator) -> Expression {
+  terms := make([dynamic]Term, allocator)
+  append(&terms, parse_term(allocator))
   for parser.symbol == .Bar {
     get_symbol()
-    append(&terms, parse_term())
+    append(&terms, parse_term(allocator))
   }
   return Expression{terms=terms}
 }
 
-parse_production :: proc() -> Production {
+parse_production :: proc(allocator := context.allocator) -> Production {
   name := parser.identifier
   get_symbol()
   expect(.Equal)
-  expr := parse_expression()
+  expr := parse_expression(allocator)
   expect(.Period)
 
   return Production{name=name, expr=expr}
 }
 
-parse :: proc(source: string) -> Grammar {
+parse :: proc(source: string, allocator := context.allocator) -> Grammar {
   if len(source) == 0 {
     return Grammar{}
   }
 
-  productions := make([dynamic]Production)
+  productions := make([dynamic]Production, allocator)
   parser = Parser {}
   parser.source = source
   parser.position = 0
@@ -223,7 +224,7 @@ parse :: proc(source: string) -> Grammar {
   }
 
   for parser.symbol == .Identifier {
-    append(&productions, parse_production())
+    append(&productions, parse_production(allocator))
   }
 
   return Grammar{
@@ -231,54 +232,62 @@ parse :: proc(source: string) -> Grammar {
   }
 }
 
-tprint_factor :: proc(factor: Factor) -> string {
+tprint_factor :: proc(factor: Factor, allocator := context.allocator) -> string {
   switch factor.type {
     case .Identifier: return factor.value.(string)
     case .Literal:    return fmt.tprintf("\"%s\"", factor.value.(string))
-    case .Grouping:   return fmt.tprintf("(%s)",   tprint(factor.value.(Expression)))
-    case .Optional:   return fmt.tprintf("[%s]",   tprint(factor.value.(Expression)))
-    case .Repetition: return fmt.tprintf("{{%s}}", tprint(factor.value.(Expression)))
+    case .Grouping:   return fmt.tprintf("(%s)",   tprint(factor.value.(Expression), allocator))
+    case .Optional:   return fmt.tprintf("[%s]",   tprint(factor.value.(Expression), allocator))
+    case .Repetition: return fmt.tprintf("{{%s}}", tprint(factor.value.(Expression), allocator))
   } 
   return ""
 }
 
-tprint_term :: proc(term: Term) -> string {
-  factors_str := make([dynamic]string)
+tprint_term :: proc(term: Term, allocator := context.allocator) -> string {
+  factors_str := make([dynamic]string, allocator)
   defer delete(factors_str)
 
   for factor in term.factors {
-    append(&factors_str, tprint(factor))
+    append(&factors_str, tprint(factor, allocator))
   }
-  return strings.join(factors_str[:], " ")
+  return strings.join(factors_str[:], " ", allocator)
 }
 
-tprint_expression :: proc(expr: Expression) -> string {
-  terms_str := make([dynamic]string)
+tprint_expression :: proc(expr: Expression, allocator := context.allocator) -> string {
+  terms_str := make([dynamic]string, allocator)
   defer delete(terms_str)
 
   for term in expr.terms {
-    append(&terms_str, tprint(term))
+    append(&terms_str, tprint(term, allocator))
   }
-  return strings.join(terms_str[:], " | ")
+  return strings.join(terms_str[:], " | ", allocator)
 }
 
-tprint_production :: proc(production: Production) -> string {
-  return fmt.tprintf("%s = %s.", production.name, tprint(production.expr)) 
+tprint_production :: proc(production: Production, allocator := context.allocator) -> string {
+  return fmt.tprintf("%s = %s.", production.name, tprint(production.expr, allocator)) 
 }
 
-tprint_grammar :: proc(grammar: Grammar) -> string {
-  productions_str := make([dynamic]string)
+tprint_grammar :: proc(grammar: Grammar, allocator := context.allocator) -> string {
+  productions_str := make([dynamic]string, allocator)
   defer delete(productions_str)
 
   for production in grammar.productions {
-    append(&productions_str, tprint(production))
+    append(&productions_str, tprint(production, allocator))
   }
-  return strings.join(productions_str[:], "\n")
+  return strings.join(productions_str[:], "\n", allocator)
 }
 
 tprint :: proc{ tprint_grammar, tprint_production, tprint_expression, tprint_term, tprint_factor }
 
 run_ebnf :: proc() {
-  grammar := parse(EBNF_Grammar)
-  fmt.println(tprint(grammar))
+  arena_buffer := make([dynamic]u8, mem.Megabyte)
+  defer delete(arena_buffer)
+
+  arena: mem.Arena
+  mem.arena_init(&arena, arena_buffer[:])
+  arena_allocator := mem.arena_allocator(&arena)
+
+  grammar := parse(EBNF_Grammar, arena_allocator)
+  fmt.println(tprint(grammar, arena_allocator))
+  fmt.printf("\nPeak used memory: %fKB\n", f32(arena.peak_used) / 1024)
 }
