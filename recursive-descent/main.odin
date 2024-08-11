@@ -2,7 +2,6 @@ package recurse
 
 import "core:fmt"
 import "core:mem"
-import rl "vendor:raylib"
 
 main :: proc() {
   when ODIN_DEBUG {
@@ -27,17 +26,6 @@ main :: proc() {
 		}
 	}
 
-  run_ebnf()
-
-  // gui()
-}
-
-gui :: proc() {
-  rl.InitWindow(1280, 760, "Recursive Descent")
-
-  for !rl.WindowShouldClose() {
-    rl.BeginDrawing()
-    rl.ClearBackground(rl.MAGENTA)
-    rl.EndDrawing()
-  }
+  // ebnf_tui()
+  ebnf_gui()
 }

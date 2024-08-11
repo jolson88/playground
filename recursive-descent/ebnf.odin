@@ -4,6 +4,7 @@ import "core:fmt"
 import "core:mem"
 import "core:strings"
 import "core:unicode"
+import rl "vendor:raylib"
 
 EBNF_Grammar :: `
   syntax     = {production}.
@@ -319,7 +320,7 @@ tprint_grammar :: proc(grammar: Grammar, allocator := context.allocator) -> stri
 
 tprint :: proc{ tprint_grammar, tprint_production, tprint_expression, tprint_term, tprint_factor }
 
-run_ebnf :: proc() {
+ebnf_tui :: proc() {
   arena_buffer := make([dynamic]u8, 4 * mem.Megabyte)
   defer delete(arena_buffer)
   arena: mem.Arena
@@ -331,4 +332,14 @@ run_ebnf :: proc() {
 
   fmt.println(serialized_grammar)
   fmt.printf("\nPeak used memory: %fKB\n", f32(arena.peak_used) / 1024)
+}
+
+ebnf_gui :: proc() {
+  rl.InitWindow(1280, 760, "Recursive Descent")
+
+  for !rl.WindowShouldClose() {
+    rl.BeginDrawing()
+    rl.ClearBackground(rl.BLACK)
+    rl.EndDrawing()
+  }
 }
