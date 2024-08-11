@@ -37,17 +37,24 @@ Factor :: struct {
   value: union { string, Expression },
 }
 
+Source_Location :: struct {
+  line: int,
+  col: int,
+  index: int,
+}
+
 Parser :: struct {
   char: u8,
-  symbol: Symbol,
-  identifier: string,
+  sym: Symbol,
+  ident: string,
 
-  source: string,
-  position: int,
-  last_error_position: int,
+  src: string,
+  loc: Source_Location,
+  last_error_loc: Source_Location,
 }
 
 Symbol :: enum {
+  Unknown,
   Identifier,
   Literal,
   Left_Paren,
@@ -59,94 +66,98 @@ Symbol :: enum {
   Right_Bracket,
   Right_Brace,
   Period,
-  Unknown,
   EOF,
 }
 
 parser: Parser
 
 read_char :: proc() {
-  if parser.position+1 >= len(parser.source) {
+  if parser.loc.index+1 >= len(parser.src) {
     return;
   }
 
-  parser.char = parser.source[parser.position+1]
-  parser.position = parser.position+1
+  parser.char = parser.src[parser.loc.index+1]
+  parser.loc.index = parser.loc.index+1
+  parser.loc.col   = parser.loc.col+1
 }
 
 skip_whitespace :: proc() {
-  for parser.position+1 < len(parser.source) && unicode.is_white_space(rune(parser.char)) {
+  for parser.loc.index+1 < len(parser.src) && unicode.is_white_space(rune(parser.char)) {
+    if parser.char == '\n' {
+      parser.loc.line = parser.loc.line+1
+      parser.loc.col = -1 // So the +1 in read_char() results in a col of 0 of this next line
+    }
     read_char()
   }
 }
 
 get_symbol :: proc() {
-  parser.identifier = ""
-  parser.symbol = .Unknown
-  if parser.position == len(parser.source) {
-    parser.symbol = .EOF
+  parser.ident = ""
+  parser.sym = .Unknown
+  if parser.loc.index == len(parser.src) {
+    parser.sym = .EOF
     return
   }
 
   skip_whitespace()
   if unicode.is_alpha(rune(parser.char)) {
-    parser.symbol = .Identifier
-    identifier_start := parser.position
+    parser.sym = .Identifier
+    identifier_start := parser.loc.index
     read_char()
     for unicode.is_alpha(rune(parser.char)) { read_char(); }
-    parser.identifier = parser.source[identifier_start:parser.position]
+    parser.ident = parser.src[identifier_start:parser.loc.index]
     return
   }
   switch parser.char {
     case '"':
-      parser.symbol = .Literal
+      parser.sym = .Literal
       read_char()
-      identifier_start := parser.position
+      identifier_start := parser.loc.index
       for parser.char != '"' { read_char() }
-      parser.identifier = parser.source[identifier_start:parser.position]
-    case '=': parser.symbol = .Equal
-    case '(': parser.symbol = .Left_Paren
-    case ')': parser.symbol = .Right_Paren
-    case '[': parser.symbol = .Left_Bracket
-    case ']': parser.symbol = .Right_Bracket
-    case '{': parser.symbol = .Left_Brace
-    case '}': parser.symbol = .Right_Brace
-    case '|': parser.symbol = .Bar
-    case '.': parser.symbol = .Period
-    case:     parser.symbol = .Unknown
+      parser.ident = parser.src[identifier_start:parser.loc.index]
+    case '=': parser.sym = .Equal
+    case '(': parser.sym = .Left_Paren
+    case ')': parser.sym = .Right_Paren
+    case '[': parser.sym = .Left_Bracket
+    case ']': parser.sym = .Right_Bracket
+    case '{': parser.sym = .Left_Brace
+    case '}': parser.sym = .Right_Brace
+    case '|': parser.sym = .Bar
+    case '.': parser.sym = .Period
+    case:     parser.sym = .Unknown
   }
   read_char()
 }
 
 error :: proc(message: string) {
-  if parser.position > parser.last_error_position+4 {
+  if parser.loc.index > parser.last_error_loc.index+4 {
+    parser.last_error_loc = parser.loc
     fmt.println(message)
-    fmt.printf("%v\n", parser)
-    parser.last_error_position = parser.position
+    fmt.printf("%#v\n", parser.last_error_loc)
   }
 }
 
 expect :: proc(expected_symbol: Symbol) {
-  if parser.symbol == expected_symbol {
+  if parser.sym == expected_symbol {
     get_symbol()
   } else {
-    error(fmt.tprintf("Expected %s, but got %s", expected_symbol, parser.symbol))
+    error(fmt.tprintf("Expected %s, but got %s", expected_symbol, parser.sym))
   }
 }
 
 parse_factor :: proc(allocator := context.allocator) -> Factor {
   factor: Factor
-  #partial switch parser.symbol {
+  #partial switch parser.sym {
     case .Identifier:
       factor = Factor{
         type = .Identifier,
-        value = parser.identifier
+        value = parser.ident
       }
       get_symbol()
     case .Literal:
       factor = Factor{
         type = .Literal,
-        value = parser.identifier
+        value = parser.ident
       }
       get_symbol()
     case .Left_Paren:
@@ -171,7 +182,7 @@ parse_factor :: proc(allocator := context.allocator) -> Factor {
       }
       expect(.Right_Brace)
     case:
-      error(fmt.tprintf("Unexpected symbol: %s", parser.symbol))
+      error(fmt.tprintf("Unexpected symbol: %s", parser.sym))
   }
 
   return factor
@@ -180,7 +191,7 @@ parse_factor :: proc(allocator := context.allocator) -> Factor {
 parse_term :: proc(allocator := context.allocator) -> Term {
   factors := make([dynamic]Factor, allocator)
   append(&factors, parse_factor(allocator))
-  for parser.symbol < .Bar {
+  for parser.sym < .Bar {
     append(&factors, parse_factor(allocator))
   }
   return Term{ factors=factors }
@@ -189,7 +200,7 @@ parse_term :: proc(allocator := context.allocator) -> Term {
 parse_expression :: proc(allocator := context.allocator) -> Expression {
   terms := make([dynamic]Term, allocator)
   append(&terms, parse_term(allocator))
-  for parser.symbol == .Bar {
+  for parser.sym == .Bar {
     get_symbol()
     append(&terms, parse_term(allocator))
   }
@@ -197,7 +208,7 @@ parse_expression :: proc(allocator := context.allocator) -> Expression {
 }
 
 parse_production :: proc(allocator := context.allocator) -> Production {
-  name := parser.identifier
+  name := parser.ident
   get_symbol()
   expect(.Equal)
   expr := parse_expression(allocator)
@@ -213,17 +224,21 @@ parse :: proc(source: string, allocator := context.allocator) -> Grammar {
 
   productions := make([dynamic]Production, allocator)
   parser = Parser {}
-  parser.source = source
-  parser.position = 0
+  parser.src = source
   parser.char = source[0]
+  parser.loc = Source_Location{
+    line  = 1,
+    col   = 0,
+    index = 0
+  }
 
   get_symbol()
-  if parser.symbol != .Identifier {
+  if parser.sym != .Identifier {
     fmt.printf("Couldn't find initial identifier: %s\n", source)
     return Grammar{}
   }
 
-  for parser.symbol == .Identifier {
+  for parser.sym == .Identifier {
     append(&productions, parse_production(allocator))
   }
 
@@ -234,7 +249,13 @@ parse :: proc(source: string, allocator := context.allocator) -> Grammar {
 
 tprint_factor :: proc(factor: Factor, allocator := context.allocator) -> string {
   switch factor.type {
-    case .Identifier: return factor.value.(string)
+    case .Identifier: {
+      val, ok := factor.value.(string)
+      if !ok {
+        return ""
+      }
+      return val
+    }
     case .Literal:    return fmt.tprintf("\"%s\"", factor.value.(string))
     case .Grouping:   return fmt.tprintf("(%s)",   tprint(factor.value.(Expression), allocator))
     case .Optional:   return fmt.tprintf("[%s]",   tprint(factor.value.(Expression), allocator))
