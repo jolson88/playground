@@ -335,11 +335,20 @@ ebnf_tui :: proc() {
 }
 
 ebnf_gui :: proc() {
-  rl.InitWindow(1280, 760, "Recursive Descent")
+  arena_buffer := make([dynamic]u8, 4 * mem.Megabyte)
+  defer delete(arena_buffer)
+  arena: mem.Arena
+  mem.arena_init(&arena, arena_buffer[:])
+  arena_allocator := mem.arena_allocator(&arena)
 
+  grammar := parse(EBNF_Grammar, arena_allocator)
+  fmt.printf("Found %d productions\n", len(grammar.productions))
+
+  rl.InitWindow(1280, 760, "Recursive Descent")
   for !rl.WindowShouldClose() {
     rl.BeginDrawing()
     rl.ClearBackground(rl.BLACK)
     rl.EndDrawing()
   }
+  fmt.printf("\nPeak used memory: %fKB\n", f32(arena.peak_used) / 1024)
 }
