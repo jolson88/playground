@@ -26,6 +26,6 @@ main :: proc() {
 		}
 	}
 
-  // ebnf_tui()
-  ebnf_gui()
+  ebnf_tui()
+  // ebnf_gui()
 }

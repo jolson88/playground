@@ -1,5 +1,6 @@
 package recurse
 
+import "base:runtime"
 import "core:fmt"
 import "core:mem"
 import "core:strings"
@@ -20,21 +21,25 @@ Node_Location :: struct {
 }
 
 Grammar :: struct {
+  origin_loc: runtime.Source_Code_Location,
   productions: [dynamic]Production
 }
 
 Production :: struct {
+  origin_loc: runtime.Source_Code_Location,
   loc: Node_Location,
   name: string,
   expr: Expression
 }
 
 Expression :: struct {
+  origin_loc: runtime.Source_Code_Location,
   loc: Node_Location,
   terms: [dynamic]Term
 }
 
 Term :: struct {
+  origin_loc: runtime.Source_Code_Location,
   loc: Node_Location,
   factors: [dynamic]Factor
 }
@@ -42,11 +47,13 @@ Term :: struct {
 Factor_Type :: enum{ Identifier, Literal, Optional, Repetition, Grouping }
 
 Factor :: struct {
+  origin_loc: runtime.Source_Code_Location,
   loc: Node_Location,
   type: Factor_Type,
   value: union { string, Expression },
 }
 
+// TODO: Replace with runtime.Source_Code_Location once index not needed
 Source_Location :: struct {
   line: int,
   col: int,
@@ -156,7 +163,7 @@ expect :: proc(expected_symbol: Symbol) {
 }
 
 parse_factor :: proc(allocator := context.allocator) -> Factor {
-  factor := Factor{ loc=Node_Location{ start=parser.loc } }
+  factor := Factor{ loc=Node_Location{ start=parser.loc }, origin_loc=#location() }
   #partial switch parser.sym {
     case .Identifier:
       factor = Factor{
@@ -208,7 +215,7 @@ parse_term :: proc(allocator := context.allocator) -> Term {
   }
 
   loc.end = parser.loc
-  return Term{ factors=factors, loc=loc }
+  return Term{ factors=factors, loc=loc, origin_loc=#location() }
 }
 
 parse_expression :: proc(allocator := context.allocator) -> Expression {
@@ -221,7 +228,7 @@ parse_expression :: proc(allocator := context.allocator) -> Expression {
   }
 
   loc.end = parser.loc
-  return Expression{ terms=terms, loc=loc }
+  return Expression{ terms=terms, loc=loc, origin_loc=#location() }
 }
 
 parse_production :: proc(allocator := context.allocator) -> Production {
@@ -234,7 +241,7 @@ parse_production :: proc(allocator := context.allocator) -> Production {
   expect(.Period)
 
   loc.end = parser.loc
-  return Production{name=name, expr=expr, loc=loc}
+  return Production{name=name, expr=expr, loc=loc, origin_loc=#location()}
 }
 
 parse :: proc(source: string, allocator := context.allocator) -> Grammar {
@@ -263,6 +270,7 @@ parse :: proc(source: string, allocator := context.allocator) -> Grammar {
   }
 
   return Grammar{
+    origin_loc = #location(),
     productions = productions
   }
 }
@@ -330,6 +338,8 @@ ebnf_tui :: proc() {
   grammar := parse(EBNF_Grammar, arena_allocator)
   serialized_grammar := tprint(grammar, arena_allocator)
 
+  file_src := #load(#file, string)
+  fmt.printf("%s\n\n", file_src)
   fmt.println(serialized_grammar)
   fmt.printf("\nPeak used memory: %fKB\n", f32(arena.peak_used) / 1024)
 }
