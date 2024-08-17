@@ -357,7 +357,11 @@ ebnf_gui :: proc() {
   rl.InitWindow(1280, 760, "Recursive Descent")
   for !rl.WindowShouldClose() {
     rl.BeginDrawing()
-    rl.ClearBackground(rl.BLACK)
+    rl.ClearBackground(rl.WHITE)
+
+    rl.GuiSetStyle(.DEFAULT, i32(rl.GuiDefaultProperty.TEXT_ALIGNMENT_VERTICAL), i32(rl.GuiTextAlignmentVertical.TEXT_ALIGN_TOP))
+    rl.GuiTextBox(rl.Rectangle{ 24, 24, 480, 624 }, EBNF_Grammar, 1024, false)
+
     rl.EndDrawing()
   }
   fmt.printf("\nPeak used memory: %fKB\n", f32(arena.peak_used) / 1024)
