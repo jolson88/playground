@@ -22,18 +22,27 @@ text_scroll :: proc() {
 
         padding: i32 = 20
         border_size:  i32 = 5
-        window_loc := Dimensions{padding, padding, screen_width - padding * 2, (screen_height - padding * 2) / 2}
-        ui_text_window(window_loc, #file, border_size, &code_window_minimized)
+        window_loc := Dimensions{
+            padding, padding,
+            screen_width - padding * 2, (screen_height - padding * 2) / 2
+        }
+        content_loc: Dimensions
+        if (ui_window(window_loc, #file, border_size, &content_loc, &code_window_minimized)) {
+            margin: i32 = 5
+            rl.SetTextLineSpacing(24)
+            rl.BeginScissorMode(content_loc.x, content_loc.y, content_loc.width, content_loc.height)
+            rl.DrawText(strings.clone_to_cstring(src), content_loc.x + margin, content_loc.y + margin, 16, rl.WHITE)
+            rl.EndScissorMode()
+        }
         
         rl.EndDrawing()
     }
 }
 
-ui_text_window :: proc(window_loc: Dimensions, title: string, border_size: i32, minimized: ^bool) {
+ui_window :: proc(window_loc: Dimensions, title: string, border_size: i32, content_loc: ^Dimensions, minimized: ^bool) -> bool {
+    // window frame
     render_x := window_loc.x
     render_y := window_loc.y
-
-    // window body
     rl.DrawRectangle(
         render_x, render_y,
         window_loc.width, window_loc.height if !minimized^ else window_title_height,
@@ -43,32 +52,23 @@ ui_text_window :: proc(window_loc: Dimensions, title: string, border_size: i32, 
     // title bar
     render_x = window_loc.x + border_size
     render_y = window_loc.y
-    title_text := rl.GuiIconText(.ICON_ARROW_DOWN if !minimized^ else .ICON_ARROW_RIGHT, #file)
+    title_bounds    := rl.Rectangle{f32(render_x), f32(render_y), f32(window_loc.width), f32(window_title_height)}
     title_font_size := window_title_height - border_size * 2
+    title_text      := rl.GuiIconText(.ICON_ARROW_DOWN if !minimized^ else .ICON_ARROW_RIGHT, #file)
     rl.GuiSetStyle(.DEFAULT, i32(rl.GuiDefaultProperty.TEXT_SIZE), title_font_size)
     rl.GuiSetStyle(.DEFAULT, i32(rl.GuiControlProperty.TEXT_COLOR_NORMAL), i32(rl.ColorToInt(rl.WHITE)))
-    if (rl.GuiLabelButton(rl.Rectangle{f32(render_x), f32(render_y), f32(window_loc.width), f32(window_title_height)}, title_text)) {
+    if (rl.GuiLabelButton(title_bounds, title_text)) {
         minimized^ = !minimized^
     }
 
-    if (minimized^) {
-        return
+    // content background
+    if (!minimized^) {
+        content_loc^ = Dimensions{
+            window_loc.x + border_size, window_loc.y + window_title_height,
+            window_loc.width - border_size * 2, window_loc.height - window_title_height - border_size
+        }
+        rl.DrawRectangle(content_loc.x, content_loc.y, content_loc.width, content_loc.height, rl.Color{59, 69, 73, 255})
     }
 
-    // window contents
-    render_x = window_loc.x + border_size
-    render_y = render_y + window_title_height
-    content_loc := Dimensions{render_x, render_y, window_loc.width - border_size * 2, window_loc.height - window_title_height - border_size}
-    rl.DrawRectangle(
-        content_loc.x, content_loc.y,
-        content_loc.width, content_loc.height,
-        rl.Color{59, 69, 73, 255},
-    )
-    
-    render_x = render_x + border_size
-    render_y = render_y + border_size
-    rl.SetTextLineSpacing(24)
-    rl.BeginScissorMode(content_loc.x, content_loc.y, content_loc.width, content_loc.height)
-    rl.DrawText(strings.clone_to_cstring(src), render_x, render_y, 16, rl.WHITE)
-    rl.EndScissorMode()
+    return !minimized^
 }
