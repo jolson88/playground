@@ -2,3 +2,4 @@
 **/*.exe
 **/*.dSYM
 **/playground*
+**/rl-examples*

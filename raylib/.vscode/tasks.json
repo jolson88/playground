@@ -6,7 +6,7 @@
         {
             "label": "run",
             "type": "shell",
-            "command": "odin run src -debug -vet -out:playground-rl",
+            "command": "odin run src -debug -vet -out:playground-rl.bin",
             "problemMatcher": [],
             "group": {
                 "kind": "build",
