@@ -19,16 +19,16 @@ text_scroll :: proc() {
         rl.ClearBackground(rl.Color{120, 143, 153, 255})
 
         border_size: i32 = 5
-        content_loc: Dimensions
+        content_loc: rl.Rectangle
         screen_width  = rl.GetScreenWidth()
         screen_height = rl.GetScreenHeight()
 
-        window_loc := Dimensions{20, 20, screen_width - 40, (screen_height - 40) / 2}
+        window_loc := rl.Rectangle{20, 20, f32(screen_width - 40), f32((screen_height - 40) / 2)}
         if (ui_window(window_loc, #file, border_size, &content_loc, &code_window_minimized)) {
             margin: i32 = 5
             rl.SetTextLineSpacing(24)
-            rl.BeginScissorMode(content_loc.x, content_loc.y, content_loc.width, content_loc.height)
-            rl.DrawText(strings.clone_to_cstring(src), content_loc.x + margin, content_loc.y + margin, 16, rl.WHITE)
+            rl.BeginScissorMode(i32(content_loc.x), i32(content_loc.y), i32(content_loc.width), i32(content_loc.height))
+            rl.DrawText(strings.clone_to_cstring(src), i32(content_loc.x) + margin, i32(content_loc.y) + margin, 16, rl.WHITE)
             rl.EndScissorMode()
         }
         
@@ -36,19 +36,23 @@ text_scroll :: proc() {
     }
 }
 
-ui_window :: proc(window_loc: Dimensions, title: string, border_size: i32, content_loc: ^Dimensions, minimized: ^bool) -> bool {
+ui_window :: proc(window_loc: rl.Rectangle, title: string, border_size: i32, content_loc: ^rl.Rectangle, minimized: ^bool) -> bool {
     // window frame
-    render_x := window_loc.x
-    render_y := window_loc.y
+    window_width := i32(window_loc.width)
+    window_height := i32(window_loc.height)
+    window_x := i32(window_loc.x)
+    window_y := i32(window_loc.y)
+    render_x := window_x
+    render_y := window_y
     rl.DrawRectangle(
         render_x, render_y,
-        window_loc.width, window_loc.height if !minimized^ else window_title_height,
+        window_width, window_height if !minimized^ else window_title_height,
         rl.Color{63, 95, 111, 255}
     )
 
     // title bar
-    render_x = window_loc.x + border_size
-    render_y = window_loc.y
+    render_x = window_x + border_size
+    render_y = window_y
     title_bounds    := rl.Rectangle{f32(render_x), f32(render_y), f32(window_loc.width), f32(window_title_height)}
     title_font_size := window_title_height - border_size * 2
     title_text      := rl.GuiIconText(.ICON_ARROW_DOWN if !minimized^ else .ICON_ARROW_RIGHT, #file)
@@ -60,11 +64,11 @@ ui_window :: proc(window_loc: Dimensions, title: string, border_size: i32, conte
 
     // content background
     if (!minimized^) {
-        content_loc^ = Dimensions{
-            window_loc.x + border_size, window_loc.y + window_title_height,
-            window_loc.width - border_size * 2, window_loc.height - window_title_height - border_size
+        content_loc^ = rl.Rectangle{
+            f32(window_x + border_size), f32(window_y + window_title_height),
+            f32(window_width - border_size * 2), f32(window_height - window_title_height - border_size)
         }
-        rl.DrawRectangle(content_loc.x, content_loc.y, content_loc.width, content_loc.height, rl.Color{59, 69, 73, 255})
+        rl.DrawRectangle(i32(content_loc.x), i32(content_loc.y), i32(content_loc.width), i32(content_loc.height), rl.Color{59, 69, 73, 255})
     }
 
     return !minimized^
