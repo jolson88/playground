@@ -3,3 +3,4 @@
 **/*.dSYM
 **/playground*
 **/rl-examples*
+**/.DS_Store
