@@ -15,18 +15,15 @@ text_scroll :: proc() {
     screen_width, screen_height: i32
     code_window_minimized := false
     for !rl.WindowShouldClose() {
-        screen_width  = rl.GetScreenWidth()
-        screen_height = rl.GetScreenHeight()
         rl.BeginDrawing()
         rl.ClearBackground(rl.Color{120, 143, 153, 255})
 
-        padding: i32 = 20
-        border_size:  i32 = 5
-        window_loc := Dimensions{
-            padding, padding,
-            screen_width - padding * 2, (screen_height - padding * 2) / 2
-        }
+        border_size: i32 = 5
         content_loc: Dimensions
+        screen_width  = rl.GetScreenWidth()
+        screen_height = rl.GetScreenHeight()
+
+        window_loc := Dimensions{20, 20, screen_width - 40, (screen_height - 40) / 2}
         if (ui_window(window_loc, #file, border_size, &content_loc, &code_window_minimized)) {
             margin: i32 = 5
             rl.SetTextLineSpacing(24)
