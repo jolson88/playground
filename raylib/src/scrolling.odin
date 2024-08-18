@@ -3,13 +3,6 @@ package playground
 import "core:strings"
 import rl "vendor:raylib"
 
-Dimensions :: struct {
-    x: i32,
-    y: i32,
-    width: i32,
-    height: i32,
-}
-
 src := #load(#file, string)
 window_title_height: i32 = 24
 
