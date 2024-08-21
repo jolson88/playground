@@ -10,7 +10,7 @@ text_fonts :: proc() {
     rl.MaximizeWindow()
     rl.SetTargetFPS(60)
     rl.SetTextLineSpacing(32)
-    rl.GuiSetStyle(.DEFAULT, i32(rl.GuiDefaultProperty.LINE_COLOR), rl.ColorToInt(rl.WHITE))
+    rl.GuiSetStyle(.DEFAULT, i32(rl.GuiDefaultProperty.LINE_COLOR), i32(rl.ColorToInt(rl.WHITE)))
 
     font_size: i32 = 32
     src_dir := filepath.dir(#file, context.temp_allocator)

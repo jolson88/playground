@@ -27,6 +27,6 @@ main :: proc() {
         mem.tracking_allocator_destroy(&track)
     }
 
-    //text_scroll()
-    text_fonts()
+    text_scroll()
+    //text_fonts()
 }
