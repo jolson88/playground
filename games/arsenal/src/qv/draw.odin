@@ -92,6 +92,7 @@ parse_command :: proc(src: string, cur_idx: ^int) -> (cmd: Draw_Command, err: Dr
             cur_idx^ = cur_idx^+1
             cmd.type = .Draw
             cmd.direction = direction_map[cmd_code]
+            skip_whitespace(src, cur_idx)
             cmd.param_1 = parse_number(src, cur_idx) or_return
         case:
             return cmd, .Unrecognized_Command

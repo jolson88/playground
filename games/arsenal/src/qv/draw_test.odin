@@ -11,8 +11,6 @@ import "core:testing"
 
 /*
 Testing scenarios needing to be covered:
-- simple directional commands
-- whitespace between command and number
 - command "modifiers" ('n': return to original location, 'b': move without drawing)
 - failure if a number is found when command was expected
 - failure if a letter is found when a number was expected
@@ -53,6 +51,21 @@ parse_expected_number_test :: proc(t: ^testing.T) {
     cmd, err := parse_command(src, &idx)
     expect_value(t, err, Draw_Error.Expected_Number)
     expect_value(t, src[idx], 'u')
+}
+
+@(test)
+parse_whitespace_test :: proc(t: ^testing.T) {
+    using testing
+
+    idx: int
+    cmd, err := parse_command("r 20", &idx)
+    expect_value(t, idx, 4)
+    expect_value(t, err, Draw_Error.None)
+    expect_value(t, cmd, Draw_Command{
+        type=.Draw,
+        direction=.Right,
+        param_1=20
+    })
 }
 
 @(test)
