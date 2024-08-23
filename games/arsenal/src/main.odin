@@ -23,8 +23,8 @@ title :: proc() {
 	// title
 	qv.clear(.BLACK)
 	for i in 1..=60 {
-		qv.line(qv.Point{i*sw/60, 1}, qv.Point{sw, i*sh/60}, .RED)
-		qv.line(qv.Point{1, i*sh/60}, qv.Point{i*sw/60, sh}, .RED)
+		qv.line(qv.Point{i*sw/60, 1}, qv.Point{sw, i*sh/60}, .DARK_RED)
+		qv.line(qv.Point{1, i*sh/60}, qv.Point{i*sw/60, sh}, .DARK_RED)
 	}
 
 	/*
@@ -95,5 +95,9 @@ main :: proc() {
 		}
 	}
 
-    game()
+    //game()
+	text := "this is text"
+	for c, idx in text {
+		fmt.printf("[%i] %c\n", idx, c)
+	}
 }
