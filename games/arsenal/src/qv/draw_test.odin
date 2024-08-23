@@ -94,4 +94,40 @@ parse_directional_commands_test :: proc(t: ^testing.T) {
         direction=.Down,
         param_1=20
     })
+
+    idx = 0
+    cmd, err = parse_command("e20", &idx)
+    expect_value(t, idx, 3)
+    expect_value(t, cmd, Draw_Command{
+        type=.Draw,
+        direction=.UpRight,
+        param_1=20
+    })
+
+    idx = 0
+    cmd, err = parse_command("f20", &idx)
+    expect_value(t, idx, 3)
+    expect_value(t, cmd, Draw_Command{
+        type=.Draw,
+        direction=.DownRight,
+        param_1=20
+    })
+
+    idx = 0
+    cmd, err = parse_command("g20", &idx)
+    expect_value(t, idx, 3)
+    expect_value(t, cmd, Draw_Command{
+        type=.Draw,
+        direction=.DownLeft,
+        param_1=20
+    })
+
+    idx = 0
+    cmd, err = parse_command("h20", &idx)
+    expect_value(t, idx, 3)
+    expect_value(t, cmd, Draw_Command{
+        type=.Draw,
+        direction=.UpLeft,
+        param_1=20
+    })
 }
