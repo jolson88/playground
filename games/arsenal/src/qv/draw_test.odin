@@ -2,16 +2,47 @@ package qv
 
 import "core:testing"
 
-/*
-    title := "s8 r10u30r5f30 u30r20d20l20f10r15 r20u15l20u15r20br5 nr20d15nr20d15r25 u30r5f30r5u30br5 nd30r5f30br5 nu30r20"
-    qv.draw("bm90,250 c15")
-    qv.draw(title)
-*/
+@(test)
+test_parsing_multiple_commands :: proc(t: ^testing.T) {
+    using testing
 
-/*
-Testing scenarios needing to be covered:
-- parse all commands in a string
-*/
+    src := " br10nu30r5 f30 "
+    cmds, idx, err := parse_draw_commands(src, context.temp_allocator)
+
+    expect_value(t, idx, len(src))
+    expect_value(t, len(cmds), 4)
+    expect_value(t, err, Draw_Error.None)
+    if t.error_count == 0 {
+        expect_value(t, cmds[0], Draw_Command{
+            type=.One_Dimension,
+            direction=.Right,
+            param_1=10,
+            pen_up=true,
+        })
+        expect_value(t, cmds[1], Draw_Command{
+            type=.One_Dimension,
+            direction=.Up,
+            param_1=30,
+            return_to_pos=true,
+        })
+        expect_value(t, cmds[2], Draw_Command{
+            type=.One_Dimension,
+            direction=.Right,
+            param_1=5,
+        })
+        expect_value(t, cmds[3], Draw_Command{
+            type=.One_Dimension,
+            direction=.DownRight,
+            param_1=30,
+        })
+    }
+
+    src = "r10u30r5f30 u30r20d20l20f10r15 r20u15l20u15r20br5 nr20d15nr20d15r25 u30r5f30r5u30br5 nd30r5f30br5 nu30r20"
+    cmds, idx, err = parse_draw_commands(src, context.temp_allocator)
+
+    expect_value(t, idx, len(src))
+    expect_value(t, len(cmds), 33)
+}
 
 @(test)
 test_command_length_error :: proc(t: ^testing.T) {

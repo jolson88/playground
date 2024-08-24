@@ -148,3 +148,15 @@ parse_command :: proc(src: string, cur_idx: ^int) -> (cmd: Draw_Command, err: Dr
 
     return cmd, .None
 }
+
+parse_draw_commands :: proc(src: string, allocator := context.allocator) -> (cmds: [dynamic]Draw_Command, idx: int, err: Draw_Error) {
+    cmds = make([dynamic]Draw_Command, allocator)
+
+    skip_whitespace(src, &idx)
+    for idx < len(src) {
+        cmd := parse_command(src, &idx) or_return
+        append(&cmds, cmd)
+        skip_whitespace(src, &idx)
+    }
+    return cmds, idx, .None
+}
