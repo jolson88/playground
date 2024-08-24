@@ -70,12 +70,6 @@ Text_Point :: struct {
     row: int,
 }
 
-Typing_Entry :: struct {
-    is_done: bool,
-    start: f64,
-    text: string,
-}
-
 @(private)
 Pen_State :: struct {
     pos:    rl.Vector2,
@@ -114,6 +108,13 @@ Qv_State :: struct {
     typing_text: string,
 }
 
+@(private)
+Typing_Entry :: struct {
+    is_done: bool,
+    start: f64,
+    text: string,
+}
+
 // variables
 @(private) cyan := rl.ColorFromHSV(182, 0.73, 1.0)
 @(private) default_one_bit_palette   := [2]rl.Color{rl.BLACK, rl.WHITE}
@@ -146,8 +147,13 @@ begin :: proc() {
     rl.BeginDrawing()
 }
 
-clear :: proc(color: Palette_Color) {
+clear_screen :: proc(color: Palette_Color) {
     rl.ClearBackground(get_color(color))
+}
+
+close :: proc() {
+    delete(state.typing_entries)
+    rl.CloseWindow()
 }
 
 create_window :: proc(title: string, screen_mode: Screen_Mode, palette_mode: Palette_Mode) {
@@ -285,8 +291,15 @@ ready_to_continue :: proc(wait_for_keypress: bool) -> bool {
     if !wait_for_keypress {
         return true
     }
+    if state.is_typing {
+        return false
+    }
 
     return (rl.GetKeyPressed() != .KEY_NULL) || rl.WindowShouldClose()
+}
+
+reset_typing_memory :: proc() {
+    clear(&state.typing_entries)
 }
 
 set_palette_mode :: proc(mode: Palette_Mode) {

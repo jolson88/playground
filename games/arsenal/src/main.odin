@@ -19,7 +19,7 @@ game :: proc() {
 	sh = qv.get_screen_height()
 	
 	qv.set_text_style(24, 0, 4)
-	qv.set_typing_speed(16)
+	qv.set_typing_speed(22)
 	for !qv.should_close() {
 		qv.begin()
 
@@ -28,18 +28,24 @@ game :: proc() {
 			title()
 			if (qv.ready_to_continue(wait_for_keypress = true)) {
 				cur_screen = .Intro
+				qv.reset_typing_memory()
 			}
 
 		case .Intro:
 			intro()
+			if (qv.ready_to_continue(wait_for_keypress = true)) {
+				cur_screen = .Title
+				qv.reset_typing_memory()
+			}
 		}
 
 		qv.present()
 	}
+	qv.close()
 }
 
 title :: proc() {
-	qv.clear(.BLACK)
+	qv.clear_screen(.BLACK)
 	for i in 1..=60 {
 		phase := math.sin_f32(0.5*f32(i)+qv.get_elapsed_time()*3)
 		qv.sizeable_line(qv.Point{i*sw/60, 1}, qv.Point{sw, i*sh/60}, .DARK_RED, phase+1.2)
@@ -58,7 +64,7 @@ title :: proc() {
 }
 
 intro :: proc() {
-	qv.clear(.BLACK)
+	qv.clear_screen(.BLACK)
 
 	qv.type("Welcome to the Arsenal database", qv.Text_Point{1, 1}, .GREEN)
 
