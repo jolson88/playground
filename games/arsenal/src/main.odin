@@ -12,6 +12,7 @@ Arsenal_Screen :: enum {
 
 sw, sh: int
 cur_screen: Arsenal_Screen
+system_typing_speed := 28
 
 game :: proc() {
 	qv.create_window("Arsenal", .SEVEN_TWENTY_P, .FOUR_BIT)
@@ -19,7 +20,6 @@ game :: proc() {
 	sh = qv.get_screen_height()
 	
 	qv.set_text_style(24, 0, 4)
-	qv.set_typing_speed(22)
 	for !qv.should_close() {
 		qv.begin()
 
@@ -28,14 +28,14 @@ game :: proc() {
 			title()
 			if (qv.ready_to_continue(wait_for_keypress = true)) {
 				cur_screen = .Intro
-				qv.reset_typing_memory()
+				qv.reset_frame_memory()
 			}
 
 		case .Intro:
 			intro()
 			if (qv.ready_to_continue(wait_for_keypress = true)) {
 				cur_screen = .Title
-				qv.reset_typing_memory()
+				qv.reset_frame_memory()
 			}
 		}
 
@@ -66,31 +66,44 @@ title :: proc() {
 intro :: proc() {
 	qv.clear_screen(.BLACK)
 
-	qv.type("Welcome to the Arsenal database", qv.Text_Point{1, 1}, .GREEN)
+	qv.set_typing_speed(system_typing_speed)
+	qv.type("Welcome to the Arsenal Network", qv.Text_Point{2, 2}, .GREEN)
 
-	// login := qv.request_input("Login: ", qv.Char_Point{2, 1}, .GREEN, .LIGHT_BLUE)
-	// password := qv.request_secret_input("Password: ", qv.Char_Point{3, 1}, .GREEN, .LIGHT_BLUE)
+	login := "mazer"
+	qv.set_typing_speed(8)
+	qv.print("Login: ", qv.Text_Point{2, 4}, .GREEN)
+	qv.wait(1000)
+	qv.type(login, qv.Text_Point{9, 4}, .CYAN)
 
-	qv.type("Verifying........", qv.Text_Point{1, 4}, .GREEN)
-	qv.print("Access granted", qv.Text_Point{1, 5}, .GREEN)
+	qv.print("Password: ", qv.Text_Point{2, 5}, .GREEN)
+	qv.wait(1200)
+	qv.type("*********", qv.Text_Point{12, 5}, .CYAN)
 
-	// msg := qv.concat("Welcome to the system ", login)
-	// qv.type(msg, qv.Char_Point{7, 1}, .GREEN)
-	// qv.type("INCOMING MESSAGE FROM COMMAND - SET PRIORITY 1", qv.Char_Point{8, 1}, .GREEN)
-	
-	// msg = qv.concat("Agent ", login, ", Kurali craft have been detected in sector alpha!")
-	// qv.type(msg, qv.Char_Point{10, 1}, .RED)
-	// qv.type("Engage and destroy all enemy craft. Kurali have destroyed Terran headquarters", qv.Char_Point{11, 1}, .RED)
-	// qv.type("leaving you as our sole countermeasure. Act immediately, as there may not be", qv.Char_Point{12, 1}, .RED)
-	// qv.type("much mo^D", qv.Char_Point{13, 1}, .RED)
-	// qv.type("<EOF received from client>", qv.Char_Point{14, 1}, .GREEN)
+	qv.set_typing_speed(system_typing_speed)
+	qv.type("Verifying........", qv.Text_Point{2, 7}, .GREEN)
+	qv.print("Access granted", qv.Text_Point{2, 8}, .GREEN)
+	qv.wait(1000)
 
-	// qv.print("% ", qv.Char_Point{16, 1}, .GREEN)
-	// qv.type("execute arsenal", qv.Char_Point{16, 3}, .LIGHT_BLUE)
-	// qv.type("You have security clearence. ", qv.Char_Point{17, 1}, .GREEN)
-	// qv.type("Are you sure you wish to launch Arsenal? [yn] ", qv.Char_Point{18, 1}, .GREEN)
-	// qv.print("y", qv.Char_Point{18, 47}, .LIGHT_BLUE)
-	// qv.type("[Hit any key to execute]", qv.Char_Point{20, 1}, .GREEN)
+	msg := qv.concat("Welcome to the system [", login, "]")
+	qv.type(msg, qv.Text_Point{2, 10}, .GREEN)
+	qv.type("INCOMING MESSAGE FROM COMMAND - SET PRIORITY 1", qv.Text_Point{2, 11}, .GREEN)
+
+	qv.wait(1000)
+	msg = qv.concat("Agent ", login, ", Kurali craft have been detected in sector alpha!")
+	qv.type(msg, qv.Text_Point{2, 13}, .RED)
+	qv.type("Engage and destroy all enemy craft. Kurali have destroyed Terran headquarters", qv.Text_Point{2, 14}, .RED)
+	qv.type("leaving you as our sole countermeasure. Act immediately, as there may not be", qv.Text_Point{2, 15}, .RED)
+	qv.type("much mo^D", qv.Text_Point{2, 16}, .RED)
+	qv.type("<EOF received from client>", qv.Text_Point{2, 17}, .GREEN)
+
+	qv.print("% ", qv.Text_Point{2, 19}, .GREEN)
+	qv.wait(1500)
+	qv.type("exec ./arsenal.sh", qv.Text_Point{4, 19}, .CYAN)
+	qv.type("Security clearance granted ", qv.Text_Point{2, 20}, .GREEN)
+	qv.type("Are you sure you wish to launch Arsenal? [yn] ", qv.Text_Point{2, 21}, .GREEN)
+	qv.wait(1500)
+	qv.print("y", qv.Text_Point{48, 21}, .CYAN)
+	qv.type("[Ready! Press any key to launch]", qv.Text_Point{2, 24}, .WHITE)
 }
 
 main :: proc() {

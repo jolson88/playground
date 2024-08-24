@@ -100,6 +100,9 @@ Qv_State :: struct {
     text_rows: int,
     text_cols: int,
     
+    // timing
+    completed_timers: map[string]bool,
+
     // typing
     typing_has_started_on_frame: bool,
     is_typing: bool,
@@ -153,7 +156,12 @@ clear_screen :: proc(color: Palette_Color) {
 
 close :: proc() {
     delete(state.typing_entries)
+    delete(state.completed_timers)
     rl.CloseWindow()
+}
+
+concat :: proc(args: ..string) -> string {
+    return strings.concatenate(args, context.temp_allocator)
 }
 
 create_window :: proc(title: string, screen_mode: Screen_Mode, palette_mode: Palette_Mode) {
@@ -288,17 +296,20 @@ print_centered :: proc(text: string, row: int, color: Palette_Color) {
 }
 
 ready_to_continue :: proc(wait_for_keypress: bool) -> bool {
-    if !wait_for_keypress {
+    if !wait_for_keypress || rl.WindowShouldClose() {
         return true
     }
     if state.is_typing {
         return false
     }
 
-    return (rl.GetKeyPressed() != .KEY_NULL) || rl.WindowShouldClose()
+    should_continue := rl.GetKeyPressed() != .KEY_NULL;
+    for rl.GetKeyPressed() != .KEY_NULL {} // Clear remaining key presses for a fresh start
+    return should_continue
 }
 
-reset_typing_memory :: proc() {
+reset_frame_memory :: proc() {
+    clear(&state.completed_timers)
     clear(&state.typing_entries)
 }
 
@@ -384,6 +395,21 @@ type :: proc(text: string, pos: Text_Point, color: Palette_Color) {
         f32(state.text_char_spacing),
         get_color(color),
     )
+}
+
+wait :: proc(ms: int, loc := #caller_location) {
+    if should_return() {
+        return
+    }
+    key := strings.concatenate({loc.file_path, loc.procedure, fmt.tprintf("%i", loc.column), fmt.tprintf("%i", loc.line)}, context.temp_allocator)
+    if key in state.completed_timers {
+        return
+    }
+
+    rl.EndDrawing()
+    rl.WaitTime(f64(ms / 1000))
+    state.completed_timers[key] = true
+    rl.BeginDrawing()
 }
 
 @(private)
