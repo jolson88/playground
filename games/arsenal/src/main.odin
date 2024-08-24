@@ -12,12 +12,74 @@ Arsenal_Screen :: enum {
 	Configure_Ship,
 }
 
+Direction :: enum {
+	None = 0,
+	Down,
+	Left,
+	Right,
+	Up,
+}
+
+Entity :: struct {
+	x, y: int,
+	prev_x, prev_y: int,
+	dx, dy: int,
+	xi, yi: int,
+	hp: int,
+	hp_max: int,
+	spd: f32,
+	status: Entity_Status,
+	direction: Direction,
+	counter: int,
+	exp_counter: int,
+	cur_weapon: Weapon,
+}
+
+Entity_Status :: enum {
+	Dead = 0,
+	Alive,
+	Exploding,
+}
+
+Weapon :: struct {
+	type: Weapon_Type,
+	handle: string,
+	power: int,
+	vert_spd: int,
+	player_level: int,
+	enemy_level: int,
+	dx: int,
+	dy: int,
+	accel: f32,
+	init_spd: f32,
+	hp_max: int,
+	max_bullets_loaded: int,
+	ai_fire_rate: int,
+	color: qv.Palette_Color,
+}
+
+Weapon_Type :: enum {
+	None = 0,
+	Missile,
+	Homer,
+	Nuke,
+	Knife,
+	Chain_Gun,
+	Twin,
+	Wave,
+	Barrier,
+	Splitter,
+}
+
 // variables
 cur_screen: Arsenal_Screen
 play_intro := false
 ship_configured := false
 sh, sw: int
 system_typing_speed := 28
+weapons := map[Weapon_Type]Weapon{
+	.Missile=Weapon{}
+}
 
 // procedures
 game :: proc() {
