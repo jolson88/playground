@@ -2,7 +2,6 @@ package arsenal
 
 import "core:fmt"
 import "core:mem"
-import "core:unicode"
 import "qv"
 
 sw, sh: int
@@ -14,28 +13,28 @@ game :: proc() {
 	
 	for !qv.should_close() {
 		qv.begin()
-		defer qv.present()
-
 		title()
+		qv.present()
 	}
 }
 
 title :: proc() {
-	// title
 	qv.clear(.BLACK)
 	for i in 1..=60 {
 		qv.line(qv.Point{i*sw/60, 1}, qv.Point{sw, i*sh/60}, .DARK_RED)
 		qv.line(qv.Point{1, i*sh/60}, qv.Point{i*sw/60, sh}, .DARK_RED)
 	}
 
-	/*
-	title := "s8 r10u30r5f30 u30r20d20l20f10r15 r20u15l20u15r20br5 nr20d15nr20d15r25 u30r5f30r5u30br5 nd30r5f30br5 nu30r20"
-	qv.draw("bm90,250 c15")
+	title := "r10u30r5f30 u30r20d20l20f10r15 r20u15l20u15r20br5 nr20d15nr20d15r25 u30r5f30r5u30br5 nd30r5f30br5 nu30r20"
+	qv.draw("bm280,350 c15 s12")
 	qv.draw(title)
 
-	author := "s2 u15nu15r20d15nl20br5bu15 f15ng15e15bu15br20 nd30r20d30nl20bu10bl5f10 br5u30r20d10nl20bu10br5 r20g30"
-	qv.draw("bm450,280 c9")
+	author := "u15nu15r20d15nl20br5bu15 f15ng15e15bu15br20 nd30r20d30nl20bu10bl5f10 br5u30r20d10nl20bu10br5 r20g30"
+	qv.draw("bm790,420 c9 s4")
 	qv.draw(author)
+}
+
+	/*
 	qv.wait_for_keypress()
 
 	// intro
@@ -70,8 +69,8 @@ title :: proc() {
 	qv.print("y", qv.Char_Point{18, 47}, .LIGHT_BLUE)
 	qv.type("[Hit any key to execute]", qv.Char_Point{20, 1}, .GREEN)
 	qv.wait_for_keypress()
-	*/
 }
+*/
 
 main :: proc() {
     when ODIN_DEBUG {
@@ -96,7 +95,5 @@ main :: proc() {
 		}
 	}
 
-    //game()
-	fmt.println(unicode.is_digit(','))
-	fmt.println(unicode.is_digit('.'))
+    game()
 }

@@ -1,5 +1,6 @@
 package qv
 
+import "core:fmt"
 import "core:strings"
 import rl "vendor:raylib"
 
@@ -151,21 +152,25 @@ set_palette_mode :: proc(mode: Palette_Mode) {
 get_color :: proc(color: Palette_Color) -> rl.Color {
     color_index: int
     switch c in color {
-        case Default_Color:
-            color_index = int(c)
-        case Palette_Entry:
-            color_index = int(c)
+    case Default_Color:
+        color_index = int(c)
+    case Palette_Entry:
+        color_index = int(c)
     }
+    return get_color_from_int(color_index)
     
+}
+
+get_color_from_int :: proc(palette_entry: int) -> rl.Color {
     switch state.palette_mode {
-        case .ONE_BIT:
-            return state.one_bit_palette[color_index]
-        case .TWO_BIT:
-            return state.two_bit_palette[color_index]
-        case .FOUR_BIT:
-            return state.four_bit_palette[color_index]
-        case .EIGHT_BIT:
-            return state.eight_bit_palette[color_index]
+    case .ONE_BIT:
+        return state.one_bit_palette[palette_entry]
+    case .TWO_BIT:
+        return state.two_bit_palette[palette_entry]
+    case .FOUR_BIT:
+        return state.four_bit_palette[palette_entry]
+    case .EIGHT_BIT:
+        return state.eight_bit_palette[palette_entry]
     }
 
     return rl.BLACK
@@ -174,5 +179,69 @@ get_color :: proc(color: Palette_Color) -> rl.Color {
 line :: proc(start: Point, end: Point, color: Palette_Color) {
     real_color := get_color(color)
 
-    rl.DrawLineEx(rl.Vector2{f32(start.x), f32(start.y)}, rl.Vector2{f32(end.x), f32(end.y)}, 1, real_color)
+    line_impl(rl.Vector2{f32(start.x), f32(start.y)}, rl.Vector2{f32(end.x), f32(end.y)}, 1, real_color)
+}
+
+@(private)
+line_impl :: proc(start: rl.Vector2, end: rl.Vector2, thickness: f32, color: rl.Color) {
+    rl.DrawLineEx(start, end, thickness, color)
+}
+
+Pen_State :: struct {
+    pos:    rl.Vector2,
+    col:    int,
+    scale:  f32
+}
+
+pen_state: Pen_State
+
+draw :: proc(src: string) {
+    cmds, idx, err := parse_draw_commands(src, context.temp_allocator)
+    if err != .None {
+        fmt.eprintf("Invalid draw command (%v): %s. Failed at %i", err, src, idx)
+        return
+    }
+
+    for cmd in cmds {
+        switch cmd.type {
+        case .One_Dimension:
+            begin_pos := pen_state.pos
+            dest_pos  := begin_pos
+            switch cmd.direction {
+            case .Up:        dest_pos.y=dest_pos.y-(f32(cmd.param_1)*pen_state.scale)
+            case .UpRight:   dest_pos.y=dest_pos.y-(f32(cmd.param_1)*pen_state.scale); dest_pos.x=dest_pos.x+(f32(cmd.param_1)*pen_state.scale)
+            case .Right:     dest_pos.x=dest_pos.x+(f32(cmd.param_1)*pen_state.scale)
+            case .DownRight: dest_pos.x=dest_pos.x+(f32(cmd.param_1)*pen_state.scale); dest_pos.y=dest_pos.y+(f32(cmd.param_1)*pen_state.scale)
+            case .Down:      dest_pos.y=dest_pos.y+(f32(cmd.param_1)*pen_state.scale)
+            case .DownLeft:  dest_pos.y=dest_pos.y+(f32(cmd.param_1)*pen_state.scale); dest_pos.x=dest_pos.x-(f32(cmd.param_1)*pen_state.scale)
+            case .Left:      dest_pos.x=dest_pos.x-(f32(cmd.param_1)*pen_state.scale)
+            case .UpLeft:    dest_pos.x=dest_pos.x-(f32(cmd.param_1)*pen_state.scale); dest_pos.y=dest_pos.y-(f32(cmd.param_1)*pen_state.scale)
+            case .Unknown:   // Do Nothing
+            }
+            if !cmd.pen_up {
+                col := get_color_from_int(pen_state.col)
+                line_impl(begin_pos, dest_pos, 1, col)
+            }
+            if !cmd.return_to_pos {
+                pen_state.pos = dest_pos
+            }
+        case .Two_Dimensions:
+            begin_pos := rl.Vector2{}
+            dest_pos  := rl.Vector2{f32(cmd.param_1), f32(cmd.param_2)}
+            if !cmd.pen_up {
+                col := get_color_from_int(pen_state.col)
+                line_impl(begin_pos, dest_pos, 1, col)
+            }
+            if !cmd.return_to_pos {
+                pen_state.pos = dest_pos
+            }
+        case .Color:
+            pen_state.col = cmd.param_1
+        case .Scale:
+            // Similar to QBasic 1.1, a scale of 4 means 1 pixel
+            pen_state.scale = f32(cmd.param_1) / 4
+        case .Unknown:
+            // Do nothing
+        }
+    }
 }

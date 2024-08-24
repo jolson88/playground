@@ -98,52 +98,52 @@ parse_command :: proc(src: string, cur_idx: ^int) -> (cmd: Draw_Command, err: Dr
     cmd = Draw_Command{}
     cmd_code := src[cur_idx^];
     switch cmd_code {
-        case 'r': fallthrough
-        case 'l': fallthrough
-        case 'u': fallthrough
-        case 'd': fallthrough
-        case 'e': fallthrough
-        case 'f': fallthrough
-        case 'g': fallthrough
-        case 'h':
-            cur_idx^ = cur_idx^+1
-            cmd.type = .One_Dimension
-            cmd.direction = direction_map[cmd_code]
-            skip_whitespace(src, cur_idx)
-            cmd.param_1 = parse_number(src, cur_idx) or_return
-        case 's': fallthrough
-        case 'c':
-            cur_idx^ = cur_idx^+1
-            cmd.type = .Scale if cmd_code == 's' else .Color
-            skip_whitespace(src, cur_idx)
-            cmd.param_1 = parse_number(src, cur_idx) or_return
-        case 'm':
-            cur_idx^ = cur_idx^+1
-            cmd.type = .Two_Dimensions
-            skip_whitespace(src, cur_idx)
-            cmd.param_1 = parse_number(src, cur_idx) or_return
-            skip_whitespace(src, cur_idx)
-            if src[cur_idx^] != ',' {
-                return cmd, .Expected_Comma
-            }
-            cur_idx^ = cur_idx^+1
-            skip_whitespace(src, cur_idx)
-            cmd.param_2 = parse_number(src, cur_idx) or_return
-        case 'b':
-            cur_idx^ = cur_idx^+1
-            skip_whitespace(src, cur_idx)
-            cmd = parse_command(src, cur_idx) or_return
-            cmd.pen_up = true
-        case 'n':
-            cur_idx^ = cur_idx^+1
-            skip_whitespace(src, cur_idx)
-            cmd = parse_command(src, cur_idx) or_return
-            cmd.return_to_pos = true
-        case:
-            if unicode.is_digit(rune(src[cur_idx^])) {
-                return cmd, .Unexpected_Number
-            }
-            return cmd, .Unrecognized_Command
+    case 'r': fallthrough
+    case 'l': fallthrough
+    case 'u': fallthrough
+    case 'd': fallthrough
+    case 'e': fallthrough
+    case 'f': fallthrough
+    case 'g': fallthrough
+    case 'h':
+        cur_idx^ = cur_idx^+1
+        cmd.type = .One_Dimension
+        cmd.direction = direction_map[cmd_code]
+        skip_whitespace(src, cur_idx)
+        cmd.param_1 = parse_number(src, cur_idx) or_return
+    case 's': fallthrough
+    case 'c':
+        cur_idx^ = cur_idx^+1
+        cmd.type = .Scale if cmd_code == 's' else .Color
+        skip_whitespace(src, cur_idx)
+        cmd.param_1 = parse_number(src, cur_idx) or_return
+    case 'm':
+        cur_idx^ = cur_idx^+1
+        cmd.type = .Two_Dimensions
+        skip_whitespace(src, cur_idx)
+        cmd.param_1 = parse_number(src, cur_idx) or_return
+        skip_whitespace(src, cur_idx)
+        if src[cur_idx^] != ',' {
+            return cmd, .Expected_Comma
+        }
+        cur_idx^ = cur_idx^+1
+        skip_whitespace(src, cur_idx)
+        cmd.param_2 = parse_number(src, cur_idx) or_return
+    case 'b':
+        cur_idx^ = cur_idx^+1
+        skip_whitespace(src, cur_idx)
+        cmd = parse_command(src, cur_idx) or_return
+        cmd.pen_up = true
+    case 'n':
+        cur_idx^ = cur_idx^+1
+        skip_whitespace(src, cur_idx)
+        cmd = parse_command(src, cur_idx) or_return
+        cmd.return_to_pos = true
+    case:
+        if unicode.is_digit(rune(src[cur_idx^])) {
+            return cmd, .Unexpected_Number
+        }
+        return cmd, .Unrecognized_Command
     }
 
     return cmd, .None
