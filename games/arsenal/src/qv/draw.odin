@@ -9,6 +9,7 @@ Draw_Error :: enum {
     Command_Too_Short,
     Expected_Comma,
     Expected_Number,
+    Number_Too_Big,
     Unexpected_End_Of_Command,
     Unexpected_Number,
     Unrecognized_Command,
@@ -81,6 +82,10 @@ parse_number :: proc(src:string, cur_idx: ^int) -> (val: int, err: Draw_Error) {
         num_end = num_end+1
     }
     cur_idx^ = num_end
+    if num_end - num_start > 6 {
+        return 0, .Number_Too_Big
+    }
+
     return strconv.atoi(src[num_start:num_end]), .None
 }
 

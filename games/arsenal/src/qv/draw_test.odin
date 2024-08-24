@@ -10,7 +10,6 @@ import "core:testing"
 
 /*
 Testing scenarios needing to be covered:
-- integers that would overflow (erroring for a number > 999999 for simplicity)
 - parse all commands in a string
 */
 
@@ -37,22 +36,39 @@ test_unexpected_number_error :: proc(t: ^testing.T) {
 test_unrecognized_command_error :: proc(t: ^testing.T) {
     using testing
 
-    src := "x203"
     idx: int
-    cmd, err := parse_command(src, &idx)
+    cmd, err := parse_command("x203", &idx)
+    expect_value(t, idx, 0)
     expect_value(t, err, Draw_Error.Unrecognized_Command)
-    expect_value(t, src[idx], 'x')
 }
 
 @(test)
 test_expected_number_error :: proc(t: ^testing.T) {
     using testing
 
-    src := "ru203"
     idx: int
-    cmd, err := parse_command(src, &idx)
+    cmd, err := parse_command("ru203", &idx)
+    expect_value(t, idx, 1)
     expect_value(t, err, Draw_Error.Expected_Number)
-    expect_value(t, src[idx], 'u')
+}
+
+@(test)
+test_number_too_big_error :: proc(t: ^testing.T) {
+    using testing
+
+    idx: int
+    cmd, err := parse_command("r1000000", &idx)
+    expect_value(t, idx, 8)
+    expect_value(t, err, Draw_Error.Number_Too_Big)
+
+    idx = 0
+    cmd, err = parse_command("r999999", &idx)
+    expect_value(t, idx, 7)
+    expect_value(t, cmd, Draw_Command{
+        type=.One_Dimension,
+        direction=.Right,
+        param_1=999999,
+    })
 }
 
 @(test)
