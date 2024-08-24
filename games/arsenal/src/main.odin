@@ -41,6 +41,12 @@ Entity_Status :: enum {
 	Exploding,
 }
 
+Owner :: enum {
+	Unknown = 0,
+	Enemy,
+	Player,
+}
+
 Weapon :: struct {
 	type: Weapon_Type,
 	handle: string,
@@ -78,7 +84,15 @@ ship_configured := false
 sh, sw: int
 system_typing_speed := 28
 weapons := map[Weapon_Type]Weapon{
-	.Missile=Weapon{}
+	.Missile   = Weapon{ type=.Missile,   handle="Missile",   dx=20, dy=2,  init_spd=0.4, ai_fire_rate=4,  color=.YELLOW},
+	.Homer     = Weapon{ type=.Homer,     handle="Homer",     dx=5,  dy=2,  init_spd=0.4, ai_fire_rate=4,  color=.DARK_BLUE},
+	.Nuke      = Weapon{ type=.Nuke,      handle="Nuke",      dx=40, dy=4,  init_spd=4,   ai_fire_rate=10, color=.BROWN},
+	.Knife     = Weapon{ type=.Knife,     handle="Knife",     dx=15, dy=1,  init_spd=20,  ai_fire_rate=6,  color=.GRAY},
+	.Chain_Gun = Weapon{ type=.Chain_Gun, handle="Chain Gun", dx=20, dy=1,  init_spd=8,   ai_fire_rate=1,  color=.WHITE},
+	.Twin 	   = Weapon{ type=.Twin, 	  handle="Twin", 	  dx=25, dy=1,  init_spd=4,   ai_fire_rate=4,  color=.DARK_GREEN},
+	.Wave      = Weapon{ type=.Wave,      handle="Wave",      dx=10, dy=2,  init_spd=14,  ai_fire_rate=10, color=.RED},
+	.Barrier   = Weapon{ type=.Barrier,   handle="Barrier",   dx=4,  dy=40, init_spd=4,   ai_fire_rate=8,  color=.BLUE, accel=0.1},
+	.Splitter  = Weapon{ type=.Splitter,  handle="Splitter",  dx=20, dy=2,  init_spd=15,  ai_fire_rate=4,  color=.DARK_RED, vert_spd=6, max_bullets_loaded=18},
 }
 
 // procedures
