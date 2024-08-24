@@ -10,6 +10,7 @@ Draw_Error :: enum {
     Expected_Comma,
     Expected_Number,
     Unexpected_End_Of_Command,
+    Unexpected_Number,
     Unrecognized_Command,
 }
 
@@ -17,6 +18,7 @@ Draw_Command_Type :: enum {
     Unknown = 0,
     One_Dimension,
     Two_Dimensions,
+    Scale,
 }
 
 Draw_Direction :: enum {
@@ -86,6 +88,7 @@ parse_command :: proc(src: string, cur_idx: ^int) -> (cmd: Draw_Command, err: Dr
         return Draw_Command{}, .Command_Too_Short
     }
 
+    skip_whitespace(src, cur_idx)
     cmd = Draw_Command{}
     cmd_code := src[cur_idx^];
     switch cmd_code {
@@ -102,14 +105,11 @@ parse_command :: proc(src: string, cur_idx: ^int) -> (cmd: Draw_Command, err: Dr
             cmd.direction = direction_map[cmd_code]
             skip_whitespace(src, cur_idx)
             cmd.param_1 = parse_number(src, cur_idx) or_return
-        case 'n':
+        case 's':
             cur_idx^ = cur_idx^+1
-            cmd = parse_command(src, cur_idx) or_return
-            cmd.return_to_pos = true
-        case 'b':
-            cur_idx^ = cur_idx^+1
-            cmd = parse_command(src, cur_idx) or_return
-            cmd.pen_up = true
+            cmd.type = .Scale
+            skip_whitespace(src, cur_idx)
+            cmd.param_1 = parse_number(src, cur_idx) or_return
         case 'm':
             cur_idx^ = cur_idx^+1
             cmd.type = .Two_Dimensions
@@ -122,7 +122,20 @@ parse_command :: proc(src: string, cur_idx: ^int) -> (cmd: Draw_Command, err: Dr
             cur_idx^ = cur_idx^+1
             skip_whitespace(src, cur_idx)
             cmd.param_2 = parse_number(src, cur_idx) or_return
+        case 'b':
+            cur_idx^ = cur_idx^+1
+            skip_whitespace(src, cur_idx)
+            cmd = parse_command(src, cur_idx) or_return
+            cmd.pen_up = true
+        case 'n':
+            cur_idx^ = cur_idx^+1
+            skip_whitespace(src, cur_idx)
+            cmd = parse_command(src, cur_idx) or_return
+            cmd.return_to_pos = true
         case:
+            if unicode.is_digit(rune(src[cur_idx^])) {
+                return cmd, .Unexpected_Number
+            }
             return cmd, .Unrecognized_Command
     }
 

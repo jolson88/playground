@@ -10,15 +10,13 @@ import "core:testing"
 
 /*
 Testing scenarios needing to be covered:
-- failure if a number is found when command was expected
-- scaling command
 - color command
 - integers that would overflow (erroring for a number > 999999 for simplicity)
 - parse all commands in a string
 */
 
 @(test)
-parse_command_length_test :: proc(t: ^testing.T) {
+test_command_length_error :: proc(t: ^testing.T) {
     using testing
 
     idx: int
@@ -27,7 +25,17 @@ parse_command_length_test :: proc(t: ^testing.T) {
 }
 
 @(test)
-parse_unrecognized_command_test :: proc(t: ^testing.T) {
+test_unexpected_number_error :: proc(t: ^testing.T) {
+    using testing
+
+    idx: int
+    cmd, err := parse_command("123r45", &idx)
+    expect_value(t, idx, 0)
+    expect_value(t, err, Draw_Error.Unexpected_Number)
+}
+
+@(test)
+test_unrecognized_command_error :: proc(t: ^testing.T) {
     using testing
 
     src := "x203"
@@ -38,7 +46,7 @@ parse_unrecognized_command_test :: proc(t: ^testing.T) {
 }
 
 @(test)
-parse_expected_number_test :: proc(t: ^testing.T) {
+test_expected_number_error :: proc(t: ^testing.T) {
     using testing
 
     src := "ru203"
@@ -49,7 +57,7 @@ parse_expected_number_test :: proc(t: ^testing.T) {
 }
 
 @(test)
-parse_whitespace_test :: proc(t: ^testing.T) {
+test_whitespace_parsing :: proc(t: ^testing.T) {
     using testing
 
     idx: int
@@ -74,7 +82,7 @@ parse_whitespace_test :: proc(t: ^testing.T) {
 }
 
 @(test)
-parse_command_modifier_test :: proc(t: ^testing.T) {
+test_command_modifier_parsing :: proc(t: ^testing.T) {
     using testing
 
     idx: int
@@ -113,7 +121,7 @@ parse_command_modifier_test :: proc(t: ^testing.T) {
 }
 
 @(test)
-parse_directional_commands_test :: proc(t: ^testing.T) {
+test_directional_commands_parsing :: proc(t: ^testing.T) {
     using testing
 
     idx: int
@@ -190,7 +198,7 @@ parse_directional_commands_test :: proc(t: ^testing.T) {
 }
 
 @(test)
-parse_movement_commands_test :: proc(t: ^testing.T) {
+test_movement_command_parsing :: proc(t: ^testing.T) {
     using testing
 
     idx := 0
@@ -205,7 +213,7 @@ parse_movement_commands_test :: proc(t: ^testing.T) {
 }
 
 @(test)
-parse_invalid_movement_command_test :: proc(t: ^testing.T) {
+test_invalid_movement_command_parsing :: proc(t: ^testing.T) {
     using testing
 
     idx := 0
@@ -217,4 +225,27 @@ parse_invalid_movement_command_test :: proc(t: ^testing.T) {
     cmd, err = parse_command("m12,", &idx)
     expect_value(t, err, Draw_Error.Unexpected_End_Of_Command)
     expect_value(t, idx, 4)
+}
+
+@(test)
+test_scale_command_parsing :: proc(t: ^testing.T) {
+    using testing
+
+    idx: int
+    cmd, err := parse_command("s16", &idx)
+    expect_value(t, err, Draw_Error.None)
+    expect_value(t, idx, 3)
+    expect_value(t, cmd, Draw_Command{
+        type=.Scale,
+        param_1=16,
+    })
+
+    idx = 0
+    cmd, err = parse_command("s  16", &idx)
+    expect_value(t, err, Draw_Error.None)
+    expect_value(t, idx, 5)
+    expect_value(t, cmd, Draw_Command{
+        type=.Scale,
+        param_1=16,
+    })
 }
