@@ -2,6 +2,7 @@ package arsenal
 
 import "core:fmt"
 import "core:mem"
+import "core:unicode"
 import "qv"
 
 sw, sh: int
@@ -96,8 +97,6 @@ main :: proc() {
 	}
 
     //game()
-	text := "this is text"
-	for c, idx in text {
-		fmt.printf("[%i] %c\n", idx, c)
-	}
+	fmt.println(unicode.is_digit(','))
+	fmt.println(unicode.is_digit('.'))
 }
