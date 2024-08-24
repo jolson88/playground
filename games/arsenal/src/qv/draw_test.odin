@@ -10,7 +10,6 @@ import "core:testing"
 
 /*
 Testing scenarios needing to be covered:
-- color command
 - integers that would overflow (erroring for a number > 999999 for simplicity)
 - parse all commands in a string
 */
@@ -247,5 +246,28 @@ test_scale_command_parsing :: proc(t: ^testing.T) {
     expect_value(t, cmd, Draw_Command{
         type=.Scale,
         param_1=16,
+    })
+}
+
+@(test)
+test_color_command_parsing :: proc(t: ^testing.T) {
+    using testing
+
+    idx: int
+    cmd, err := parse_command("c8", &idx)
+    expect_value(t, err, Draw_Error.None)
+    expect_value(t, idx, 2)
+    expect_value(t, cmd, Draw_Command{
+        type=.Color,
+        param_1=8,
+    })
+
+    idx = 0
+    cmd, err = parse_command("c 12", &idx)
+    expect_value(t, err, Draw_Error.None)
+    expect_value(t, idx, 4)
+    expect_value(t, cmd, Draw_Command{
+        type=.Color,
+        param_1=12,
     })
 }

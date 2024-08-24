@@ -16,6 +16,7 @@ Draw_Error :: enum {
 
 Draw_Command_Type :: enum {
     Unknown = 0,
+    Color,
     One_Dimension,
     Two_Dimensions,
     Scale,
@@ -108,6 +109,11 @@ parse_command :: proc(src: string, cur_idx: ^int) -> (cmd: Draw_Command, err: Dr
         case 's':
             cur_idx^ = cur_idx^+1
             cmd.type = .Scale
+            skip_whitespace(src, cur_idx)
+            cmd.param_1 = parse_number(src, cur_idx) or_return
+        case 'c':
+            cur_idx^ = cur_idx^+1
+            cmd.type = .Color
             skip_whitespace(src, cur_idx)
             cmd.param_1 = parse_number(src, cur_idx) or_return
         case 'm':
