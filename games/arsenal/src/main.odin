@@ -5,16 +5,35 @@ import "core:math"
 import "core:mem"
 import "qv"
 
+Arsenal_Screen :: enum {
+	Title = 0,
+	Intro,
+}
+
 sw, sh: int
+cur_screen: Arsenal_Screen
 
 game :: proc() {
 	qv.create_window("Arsenal", .SEVEN_TWENTY_P, .FOUR_BIT)
-	sw = qv.screen_width()
-	sh = qv.screen_height()
+	sw = qv.get_screen_width()
+	sh = qv.get_screen_height()
 	
+	qv.set_text_style(24, 0, 4)
+	qv.set_typing_speed(16)
 	for !qv.should_close() {
 		qv.begin()
-		title()
+
+		switch cur_screen {
+		case .Title:
+			title()
+			if (qv.ready_to_continue(wait_for_keypress = true)) {
+				cur_screen = .Intro
+			}
+
+		case .Intro:
+			intro()
+		}
+
 		qv.present()
 	}
 }
@@ -22,7 +41,7 @@ game :: proc() {
 title :: proc() {
 	qv.clear(.BLACK)
 	for i in 1..=60 {
-		phase := math.sin_f32(0.5*f32(i)+f32(qv.elapsed_time()*3))
+		phase := math.sin_f32(0.5*f32(i)+qv.get_elapsed_time()*3)
 		qv.sizeable_line(qv.Point{i*sw/60, 1}, qv.Point{sw, i*sh/60}, .DARK_RED, phase+1.2)
 		qv.sizeable_line(qv.Point{1, i*sh/60}, qv.Point{i*sw/60, sh}, .DARK_RED, phase+2.0)
 	}
@@ -34,45 +53,39 @@ title :: proc() {
 	author := "u15nu15r20d15nl20br5bu15 f15ng15e15bu15br20 nd30r20d30nl20bu10bl5f10 br5u30r20d10nl20bu10br5 r20g30"
 	qv.draw("bm790,420 c9 s4")
 	qv.draw(author)
+
+	qv.print_centered("Press any key to start", qv.get_text_rows()-5, .GRAY)
 }
 
-	/*
-	qv.wait_for_keypress()
-
-	// intro
+intro :: proc() {
 	qv.clear(.BLACK)
 
-	qv.typing_speed(5)
-	qv.type("Welcome to the Arsenal database", qv.Char_Point{1, 1}, .GREEN)
-	qv.print("Login: ", qv.Char_Point{2, 1}, .GREEN)
-	login := qv.request_input(qv.Char_Point{2, 8}, .LIGHT_BLUE)
-	qv.print("Password: ", qv.Char_Point{3, 1}, .GREEN)
-	password := qv.request_secret_input(qv.Char_Point{3, 11}, .LIGHT_BLUE)
+	qv.type("Welcome to the Arsenal database", qv.Text_Point{1, 1}, .GREEN)
 
-	qv.print("Verifying", qv.Char_Point{4, 1}, .GREEN)
-	qv.type("........", qv.Char_Point{4, 10}, .GREEN)
-	qv.print("Access granted", qv.Char_Point{5, 1}, .GREEN)
+	// login := qv.request_input("Login: ", qv.Char_Point{2, 1}, .GREEN, .LIGHT_BLUE)
+	// password := qv.request_secret_input("Password: ", qv.Char_Point{3, 1}, .GREEN, .LIGHT_BLUE)
 
-	msg := qv.concat("Welcome to the system ", login)
-	qv.type(msg, qv.Char_Point{7, 1}, .GREEN)
-	qv.type("INCOMING MESSAGE FROM COMMAND - SET PRIORITY 1", qv.Char_Point{8, 1}, .GREEN)
+	qv.type("Verifying........", qv.Text_Point{1, 4}, .GREEN)
+	qv.print("Access granted", qv.Text_Point{1, 5}, .GREEN)
+
+	// msg := qv.concat("Welcome to the system ", login)
+	// qv.type(msg, qv.Char_Point{7, 1}, .GREEN)
+	// qv.type("INCOMING MESSAGE FROM COMMAND - SET PRIORITY 1", qv.Char_Point{8, 1}, .GREEN)
 	
-	msg = qv.concat("Agent ", login, ", Kurali craft have been detected in sector alpha!")
-	qv.type(msg, qv.Char_Point{10, 1}, .RED)
-	qv.type("Engage and destroy all enemy craft. Kurali have destroyed Terran headquarters", qv.Char_Point{11, 1}, .RED)
-	qv.type("leaving you as our sole countermeasure. Act immediately, as there may not be", qv.Char_Point{12, 1}, .RED)
-	qv.type("much mo^D", qv.Char_Point{13, 1}, .RED)
-	qv.type("<EOF received from client>", qv.Char_Point{14, 1}, .GREEN)
+	// msg = qv.concat("Agent ", login, ", Kurali craft have been detected in sector alpha!")
+	// qv.type(msg, qv.Char_Point{10, 1}, .RED)
+	// qv.type("Engage and destroy all enemy craft. Kurali have destroyed Terran headquarters", qv.Char_Point{11, 1}, .RED)
+	// qv.type("leaving you as our sole countermeasure. Act immediately, as there may not be", qv.Char_Point{12, 1}, .RED)
+	// qv.type("much mo^D", qv.Char_Point{13, 1}, .RED)
+	// qv.type("<EOF received from client>", qv.Char_Point{14, 1}, .GREEN)
 
-	qv.print("% ", qv.Char_Point{16, 1}, .GREEN)
-	qv.type("execute arsenal", qv.Char_Point{16, 3}, .LIGHT_BLUE)
-	qv.type("You have security clearence. ", qv.Char_Point{17, 1}, .GREEN)
-	qv.type("Are you sure you wish to launch Arsenal? [yn] ", qv.Char_Point{18, 1}, .GREEN)
-	qv.print("y", qv.Char_Point{18, 47}, .LIGHT_BLUE)
-	qv.type("[Hit any key to execute]", qv.Char_Point{20, 1}, .GREEN)
-	qv.wait_for_keypress()
+	// qv.print("% ", qv.Char_Point{16, 1}, .GREEN)
+	// qv.type("execute arsenal", qv.Char_Point{16, 3}, .LIGHT_BLUE)
+	// qv.type("You have security clearence. ", qv.Char_Point{17, 1}, .GREEN)
+	// qv.type("Are you sure you wish to launch Arsenal? [yn] ", qv.Char_Point{18, 1}, .GREEN)
+	// qv.print("y", qv.Char_Point{18, 47}, .LIGHT_BLUE)
+	// qv.type("[Hit any key to execute]", qv.Char_Point{20, 1}, .GREEN)
 }
-*/
 
 main :: proc() {
     when ODIN_DEBUG {

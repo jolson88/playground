@@ -1,63 +1,11 @@
 package qv
 
 import "core:fmt"
+import "core:path/filepath"
 import "core:strings"
 import rl "vendor:raylib"
 
-cyan := rl.ColorFromHSV(182, 0.73, 1.0)
-default_one_bit_palette   := [2]rl.Color{rl.BLACK, rl.WHITE}
-default_two_bit_palette   := [4]rl.Color{rl.BLACK, cyan, rl.MAGENTA, rl.GRAY}
-default_four_bit_palette  := [16]rl.Color{rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE}
-default_eight_bit_palette := [256]rl.Color{
-    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
-    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
-    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
-    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
-    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
-    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
-    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
-    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
-    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
-    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
-    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
-    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
-    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
-    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
-    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
-    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
-}
-
-Qv_State :: struct {
-    screen_width, screen_height: int,
-    screen_mode: Screen_Mode,
-
-    palette_mode: Palette_Mode,
-    one_bit_palette:   [2]rl.Color,
-    two_bit_palette:   [4]rl.Color,
-    four_bit_palette:  [16]rl.Color,
-    eight_bit_palette: [256]rl.Color,
-}
-
-Pen_State :: struct {
-    pos:    rl.Vector2,
-    col:    int,
-    scale:  f32
-}
-
-// screen
-Screen_Mode :: enum {
-    TEN_EIGHTY_P = 0,
-    SEVEN_TWENTY_P = 1,
-}
-
-// colors
-Palette_Mode :: enum {
-    FOUR_BIT = 0,
-    ONE_BIT = 1,
-    TWO_BIT,
-    EIGHT_BIT,
-}
-
+// structures
 Default_Color :: enum {
     BLACK = 0,
     DARK_BLUE = 1,
@@ -75,6 +23,11 @@ Default_Color :: enum {
     MAGENTA,
     YELLOW,
     WHITE,
+}
+
+Palette_Color :: union {
+    Default_Color,
+    Palette_Entry
 }
 
 Palette_Entry :: enum {
@@ -96,20 +49,103 @@ Palette_Entry :: enum {
     PF0, PF1, PF2, PF3, PF4, PF5, PF6, PF7, PF8, PF9, PFA, PFB, PFC, PFD, PFE, PFF,
 }
 
-Palette_Color :: union {
-    Default_Color,
-    Palette_Entry
+Palette_Mode :: enum {
+    FOUR_BIT = 0,
+    ONE_BIT = 1,
+    TWO_BIT,
+    EIGHT_BIT,
 }
 
 Point :: struct {
     x, y: int
 }
 
+Screen_Mode :: enum {
+    TEN_EIGHTY_P = 0,
+    SEVEN_TWENTY_P = 1,
+}
+
+Text_Point :: struct {
+    col: int,
+    row: int,
+}
+
+Typing_Entry :: struct {
+    is_done: bool,
+    start: f64,
+    text: string,
+}
+
+@(private)
+Pen_State :: struct {
+    pos:    rl.Vector2,
+    col:    int,
+    scale:  f32
+}
+
+@(private)
+Qv_State :: struct {
+    // screen
+    screen_width, screen_height: int,
+    screen_mode: Screen_Mode,
+    frame_dur: f32,
+
+    // colors
+    palette_mode: Palette_Mode,
+    one_bit_palette:   [2]rl.Color,
+    two_bit_palette:   [4]rl.Color,
+    four_bit_palette:  [16]rl.Color,
+    eight_bit_palette: [256]rl.Color,
+
+    // text
+    text_font: rl.Font,
+    text_char_width: int,
+    text_char_spacing: int,
+    text_line_height: int,
+    text_line_spacing: int,
+    text_rows: int,
+    text_cols: int,
+    
+    // typing
+    typing_has_started_on_frame: bool,
+    is_typing: bool,
+    typing_cps: int,
+    typing_entries: map[string]Typing_Entry,
+    typing_text: string,
+}
+
 // variables
-state: Qv_State
-pen_state: Pen_State
+@(private) cyan := rl.ColorFromHSV(182, 0.73, 1.0)
+@(private) default_one_bit_palette   := [2]rl.Color{rl.BLACK, rl.WHITE}
+@(private) default_two_bit_palette   := [4]rl.Color{rl.BLACK, cyan, rl.MAGENTA, rl.GRAY}
+@(private) default_four_bit_palette  := [16]rl.Color{rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE}
+@(private) default_eight_bit_palette := [256]rl.Color{
+    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
+    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
+    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
+    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
+    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
+    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
+    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
+    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
+    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
+    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
+    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
+    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
+    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
+    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
+    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
+    rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
+}
+@(private) state: Qv_State
+@(private) pen_state: Pen_State
 
 // procedures
+begin :: proc() {
+    state.typing_has_started_on_frame = false
+    rl.BeginDrawing()
+}
+
 clear :: proc(color: Palette_Color) {
     rl.ClearBackground(get_color(color))
 }
@@ -124,6 +160,7 @@ create_window :: proc(title: string, screen_mode: Screen_Mode, palette_mode: Pal
     }
     rl.InitWindow(i32(state.screen_width), i32(state.screen_height), strings.clone_to_cstring(title, context.temp_allocator))
     rl.SetTargetFPS(60)
+    state.frame_dur = 60 / 1000
 
     state.one_bit_palette   = default_one_bit_palette
     state.two_bit_palette   = default_two_bit_palette
@@ -132,76 +169,10 @@ create_window :: proc(title: string, screen_mode: Screen_Mode, palette_mode: Pal
     set_palette_mode(palette_mode)
 }
 
-elapsed_time :: proc() -> f64 {
-    return rl.GetTime()
-}
-
-screen_width :: proc() -> int {
-    return state.screen_width
-}
-
-screen_height :: proc() -> int {
-    return state.screen_height
-}
-
-should_close :: proc() -> bool {
-    return rl.WindowShouldClose()
-}
-
-begin :: proc() {
-    rl.BeginDrawing()
-}
-
-present :: proc() {
-    rl.EndDrawing()
-}
-
-set_palette_mode :: proc(mode: Palette_Mode) {
-    state.palette_mode = mode
-}
-
-get_color :: proc(color: Palette_Color) -> rl.Color {
-    color_index: int
-    switch c in color {
-    case Default_Color:
-        color_index = int(c)
-    case Palette_Entry:
-        color_index = int(c)
-    }
-    return get_color_from_int(color_index)
-    
-}
-
-get_color_from_int :: proc(palette_entry: int) -> rl.Color {
-    switch state.palette_mode {
-    case .ONE_BIT:
-        return state.one_bit_palette[palette_entry]
-    case .TWO_BIT:
-        return state.two_bit_palette[palette_entry]
-    case .FOUR_BIT:
-        return state.four_bit_palette[palette_entry]
-    case .EIGHT_BIT:
-        return state.eight_bit_palette[palette_entry]
-    }
-
-    return rl.BLACK
-}
-
-line :: proc(start: Point, end: Point, color: Palette_Color) {
-    sizeable_line(start, end, color, 1)
-}
-
-sizeable_line :: proc(start: Point, end: Point, color: Palette_Color, thickness: f32) {
-    real_color := get_color(color)
-    line_impl(rl.Vector2{f32(start.x), f32(start.y)}, rl.Vector2{f32(end.x), f32(end.y)}, thickness, real_color)
-}
-
-@(private)
-line_impl :: proc(start: rl.Vector2, end: rl.Vector2, thickness: f32, color: rl.Color) {
-    rl.DrawLineEx(start, end, thickness, color)
-}
-
 draw :: proc(src: string) {
+    if should_return() {
+        return
+    }
     cmds, idx, err := parse_draw_commands(src, context.temp_allocator)
     if err != .None {
         fmt.eprintf("Invalid draw command (%v): %s. Failed at %i", err, src, idx)
@@ -250,4 +221,201 @@ draw :: proc(src: string) {
             // Do nothing
         }
     }
+}
+
+get_elapsed_time :: proc() -> f32 {
+    return f32(rl.GetTime())
+}
+
+get_screen_width :: proc() -> int {
+    return state.screen_width
+}
+
+get_screen_height :: proc() -> int {
+    return state.screen_height
+}
+
+get_text_char_width :: proc() -> int {
+    return state.text_char_width
+}
+
+get_text_columns :: proc() -> int {
+    return state.text_cols
+}
+
+get_text_line_height :: proc() -> int {
+    return state.text_line_height
+}
+
+get_text_rows :: proc() -> int {
+    return state.text_rows
+}
+
+line :: proc(start: Point, end: Point, color: Palette_Color) {
+    if should_return() {
+        return
+    }
+
+    sizeable_line(start, end, color, 1)
+}
+
+present :: proc() {
+    rl.EndDrawing()
+}
+
+print :: proc(text: string, pos: Text_Point, color: Palette_Color) {
+    if should_return() {
+        return
+    }
+
+    rl.DrawTextEx(state.text_font,
+        strings.clone_to_cstring(text, context.temp_allocator),
+        get_vector_from_text_point(pos),
+        f32(state.text_font.baseSize),
+        f32(state.text_char_spacing),
+        get_color(color)
+    )
+}
+
+print_centered :: proc(text: string, row: int, color: Palette_Color) {
+	print(text, Text_Point{(get_text_columns()-len(text)) / 2, row}, color)
+}
+
+ready_to_continue :: proc(wait_for_keypress: bool) -> bool {
+    if !wait_for_keypress {
+        return true
+    }
+
+    return (rl.GetKeyPressed() != .KEY_NULL) || rl.WindowShouldClose()
+}
+
+set_palette_mode :: proc(mode: Palette_Mode) {
+    state.palette_mode = mode
+}
+
+set_text_style :: proc(size: int, char_spacing: int, line_spacing: int) {
+    // MEM: Cache previously loaded fonts so continued use doesn't result in resource exhaustion
+    src_dir := filepath.dir(#file, context.temp_allocator)
+    font_path := filepath.join([]string{src_dir, "resources", "DroidSansMono.ttf"}, context.temp_allocator)
+    state.text_font = rl.LoadFontEx(strings.clone_to_cstring(font_path, context.temp_allocator), i32(size), nil, 0)
+
+    char_count, line_count: int
+    cur_x, cur_y: int
+    measured_string := rl.MeasureTextEx(state.text_font, "T", f32(size), 0)
+    state.text_char_width   = int(measured_string.x)+char_spacing
+    state.text_line_height  = int(measured_string.y)+line_spacing
+    state.text_char_spacing = char_spacing
+    state.text_line_spacing = line_spacing
+    for cur_x < state.screen_width {
+        char_count = char_count+1
+        cur_x = cur_x+state.text_char_width
+    }
+    for cur_y < state.screen_height {
+        line_count = line_count+1
+        cur_y = cur_y+state.text_line_height
+    }
+    state.text_rows = line_count
+    state.text_cols = char_count
+}
+
+set_typing_speed :: proc(cps: int) {
+    state.typing_cps = cps
+}
+
+should_close :: proc() -> bool {
+    return rl.WindowShouldClose()
+}
+
+sizeable_line :: proc(start: Point, end: Point, color: Palette_Color, thickness: f32) {
+    real_color := get_color(color)
+    line_impl(rl.Vector2{f32(start.x), f32(start.y)}, rl.Vector2{f32(end.x), f32(end.y)}, thickness, real_color)
+}
+
+type :: proc(text: string, pos: Text_Point, color: Palette_Color) {
+    text_started := text in state.typing_entries
+    if (state.is_typing && state.typing_text != text) {
+        text_already_finished := state.typing_entries[text].is_done
+        if !text_already_finished {
+            return
+        }
+    }
+
+    if !text_started {
+        state.is_typing = true
+        state.typing_text = text
+        state.typing_entries[text] = Typing_Entry{
+            start=rl.GetTime(),
+            text=text,
+        }
+    }
+    entry := state.typing_entries[text]
+    if entry.is_done {
+        print(text, pos, color)
+        return
+    }
+
+    elapsed_time := rl.GetTime() - entry.start
+    typed_chars  := int(f32(state.typing_cps) * f32(elapsed_time))
+    if (typed_chars > len(text)) {
+        typed_chars = len(text)
+        entry.is_done = true
+        state.typing_entries[text] = entry
+        state.is_typing = false
+        state.typing_text = ""
+    }
+    state.typing_has_started_on_frame = true
+    rl.DrawTextEx(state.text_font,
+        strings.clone_to_cstring(text[:typed_chars], context.temp_allocator),
+        get_vector_from_text_point(pos),
+        f32(state.text_font.baseSize),
+        f32(state.text_char_spacing),
+        get_color(color),
+    )
+}
+
+@(private)
+get_color :: proc(color: Palette_Color) -> rl.Color {
+    color_index: int
+    switch c in color {
+    case Default_Color:
+        color_index = int(c)
+    case Palette_Entry:
+        color_index = int(c)
+    }
+    return get_color_from_int(color_index)
+    
+}
+
+@(private)
+get_color_from_int :: proc(palette_entry: int) -> rl.Color {
+    switch state.palette_mode {
+    case .ONE_BIT:
+        return state.one_bit_palette[palette_entry]
+    case .TWO_BIT:
+        return state.two_bit_palette[palette_entry]
+    case .FOUR_BIT:
+        return state.four_bit_palette[palette_entry]
+    case .EIGHT_BIT:
+        return state.eight_bit_palette[palette_entry]
+    }
+
+    return rl.BLACK
+}
+
+@(private)
+get_vector_from_text_point :: proc(pos: Text_Point) -> rl.Vector2 {
+    x := (pos.col-1)*state.text_char_width
+    y := (pos.row-1)*state.text_line_height
+    return rl.Vector2{f32(x+state.text_char_spacing), f32(y)}
+}
+
+@(private)
+line_impl :: proc(start: rl.Vector2, end: rl.Vector2, thickness: f32, color: rl.Color) {
+    rl.DrawLineEx(start, end, thickness, color)
+}
+
+@(private)
+should_return :: proc() -> bool {
+    typing_in_progress := state.typing_has_started_on_frame && state.is_typing
+    return rl.WindowShouldClose() || typing_in_progress
 }
