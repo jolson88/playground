@@ -97,7 +97,7 @@ weapons := map[Weapon_Type]Weapon{
 
 // procedures
 game :: proc() {
-	qv.create_window("Arsenal", .SEVEN_TWENTY_P)
+	qv.create_window("Arsenal", .Seven_Twenty_P)
 	sw = qv.get_screen_width()
 	sh = qv.get_screen_height()
 	

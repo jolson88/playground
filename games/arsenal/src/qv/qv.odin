@@ -54,8 +54,8 @@ Point :: struct {
 }
 
 Screen_Mode :: enum {
-    TEN_EIGHTY_P = 0,
-    SEVEN_TWENTY_P = 1,
+    Ten_Eighty_P = 0,
+    Seven_Twenty_P = 1,
 }
 
 Text_Point :: struct {
@@ -151,10 +151,10 @@ concat :: proc(args: ..string) -> string {
 }
 
 create_window :: proc(title: string, screen_mode: Screen_Mode) {
-    if (screen_mode == .TEN_EIGHTY_P) {
+    if (screen_mode == .Ten_Eighty_P) {
         state.screen_width  = 1920
         state.screen_height = 1080
-    } else if (screen_mode == .SEVEN_TWENTY_P) {
+    } else if (screen_mode == .Seven_Twenty_P) {
         state.screen_width  = 1280
         state.screen_height = 720
     }
