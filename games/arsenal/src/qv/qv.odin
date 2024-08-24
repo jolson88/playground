@@ -7,22 +7,22 @@ import rl "vendor:raylib"
 
 // structures
 Default_Color :: enum {
-    BLACK = 0,
-    DARK_BLUE = 1,
-    DARK_GREEN,
-    DARK_CYAN,
-    DARK_RED,
-    DARK_MAGENTA,
-    BROWN,
-    DARK_WHITE,
-    GRAY,
-    BLUE,
-    GREEN,
-    CYAN,
-    RED,
-    MAGENTA,
-    YELLOW,
-    WHITE,
+    Black = 0,
+    Dark_Blue,
+    Dark_Green,
+    Dark_Cyan,
+    Dark_Red,
+    Dark_Magenta,
+    Dark_Yellow,
+    Dark_White,
+    Gray,
+    Blue,
+    Green,
+    Cyan,
+    Red,
+    Magenta,
+    Yellow,
+    White,
 }
 
 Palette_Color :: union {
@@ -47,13 +47,6 @@ Palette_Entry :: enum {
     PD0, PD1, PD2, PD3, PD4, PD5, PD6, PD7, PD8, PD9, PDA, PDB, PDC, PDD, PDE, PDF,
     PE0, PE1, PE2, PE3, PE4, PE5, PE6, PE7, PE8, PE9, PEA, PEB, PEC, PED, PEE, PEF,
     PF0, PF1, PF2, PF3, PF4, PF5, PF6, PF7, PF8, PF9, PFA, PFB, PFC, PFD, PFE, PFF,
-}
-
-Palette_Mode :: enum {
-    FOUR_BIT = 0,
-    ONE_BIT = 1,
-    TWO_BIT,
-    EIGHT_BIT,
 }
 
 Point :: struct {
@@ -85,11 +78,7 @@ Qv_State :: struct {
     frame_dur: f32,
 
     // colors
-    palette_mode: Palette_Mode,
-    one_bit_palette:   [2]rl.Color,
-    two_bit_palette:   [4]rl.Color,
-    four_bit_palette:  [16]rl.Color,
-    eight_bit_palette: [256]rl.Color,
+    palette: [256]rl.Color,
 
     // text
     text_font: rl.Font,
@@ -120,10 +109,7 @@ Typing_Entry :: struct {
 
 // variables
 @(private) cyan := rl.ColorFromHSV(182, 0.73, 1.0)
-@(private) default_one_bit_palette   := [2]rl.Color{rl.BLACK, rl.WHITE}
-@(private) default_two_bit_palette   := [4]rl.Color{rl.BLACK, cyan, rl.MAGENTA, rl.GRAY}
-@(private) default_four_bit_palette  := [16]rl.Color{rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE}
-@(private) default_eight_bit_palette := [256]rl.Color{
+@(private) default_palette := [256]rl.Color{
     rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
     rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
     rl.BLACK, rl.ColorBrightness(rl.BLUE, -0.5), rl.ColorBrightness(rl.GREEN, -0.5), rl.ColorBrightness(cyan, -0.5), rl.ColorBrightness(rl.RED, -0.5), rl.ColorBrightness(rl.MAGENTA, -0.5), rl.ColorBrightness(rl.YELLOW, -0.5), rl.LIGHTGRAY, rl.GRAY, rl.BLUE, rl.GREEN, cyan, rl.RED, rl.MAGENTA, rl.YELLOW, rl.WHITE,
@@ -164,7 +150,7 @@ concat :: proc(args: ..string) -> string {
     return strings.concatenate(args, context.temp_allocator)
 }
 
-create_window :: proc(title: string, screen_mode: Screen_Mode, palette_mode: Palette_Mode) {
+create_window :: proc(title: string, screen_mode: Screen_Mode) {
     if (screen_mode == .TEN_EIGHTY_P) {
         state.screen_width  = 1920
         state.screen_height = 1080
@@ -175,12 +161,7 @@ create_window :: proc(title: string, screen_mode: Screen_Mode, palette_mode: Pal
     rl.InitWindow(i32(state.screen_width), i32(state.screen_height), strings.clone_to_cstring(title, context.temp_allocator))
     rl.SetTargetFPS(60)
     state.frame_dur = 60 / 1000
-
-    state.one_bit_palette   = default_one_bit_palette
-    state.two_bit_palette   = default_two_bit_palette
-    state.four_bit_palette  = default_four_bit_palette
-    state.eight_bit_palette = default_eight_bit_palette
-    set_palette_mode(palette_mode)
+    state.palette = default_palette
 }
 
 draw :: proc(src: string) {
@@ -313,10 +294,6 @@ reset_frame_memory :: proc() {
     clear(&state.typing_entries)
 }
 
-set_palette_mode :: proc(mode: Palette_Mode) {
-    state.palette_mode = mode
-}
-
 set_text_style :: proc(size: int, char_spacing: int, line_spacing: int) {
     // MEM: Cache previously loaded fonts so continued use doesn't result in resource exhaustion
     src_dir := filepath.dir(#file, context.temp_allocator)
@@ -427,18 +404,7 @@ get_color :: proc(color: Palette_Color) -> rl.Color {
 
 @(private)
 get_color_from_int :: proc(palette_entry: int) -> rl.Color {
-    switch state.palette_mode {
-    case .ONE_BIT:
-        return state.one_bit_palette[palette_entry]
-    case .TWO_BIT:
-        return state.two_bit_palette[palette_entry]
-    case .FOUR_BIT:
-        return state.four_bit_palette[palette_entry]
-    case .EIGHT_BIT:
-        return state.eight_bit_palette[palette_entry]
-    }
-
-    return rl.BLACK
+    return state.palette[palette_entry]
 }
 
 @(private)

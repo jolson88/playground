@@ -84,20 +84,20 @@ ship_configured := false
 sh, sw: int
 system_typing_speed := 28
 weapons := map[Weapon_Type]Weapon{
-	.Missile   = Weapon{ type=.Missile,   handle="Missile",   dx=20, dy=2,  init_spd=0.4, ai_fire_rate=4,  color=.YELLOW},
-	.Homer     = Weapon{ type=.Homer,     handle="Homer",     dx=5,  dy=2,  init_spd=0.4, ai_fire_rate=4,  color=.DARK_BLUE},
-	.Nuke      = Weapon{ type=.Nuke,      handle="Nuke",      dx=40, dy=4,  init_spd=4,   ai_fire_rate=10, color=.BROWN},
-	.Knife     = Weapon{ type=.Knife,     handle="Knife",     dx=15, dy=1,  init_spd=20,  ai_fire_rate=6,  color=.GRAY},
-	.Chain_Gun = Weapon{ type=.Chain_Gun, handle="Chain Gun", dx=20, dy=1,  init_spd=8,   ai_fire_rate=1,  color=.WHITE},
-	.Twin 	   = Weapon{ type=.Twin, 	  handle="Twin", 	  dx=25, dy=1,  init_spd=4,   ai_fire_rate=4,  color=.DARK_GREEN},
-	.Wave      = Weapon{ type=.Wave,      handle="Wave",      dx=10, dy=2,  init_spd=14,  ai_fire_rate=10, color=.RED},
-	.Barrier   = Weapon{ type=.Barrier,   handle="Barrier",   dx=4,  dy=40, init_spd=4,   ai_fire_rate=8,  color=.BLUE, accel=0.1},
-	.Splitter  = Weapon{ type=.Splitter,  handle="Splitter",  dx=20, dy=2,  init_spd=15,  ai_fire_rate=4,  color=.DARK_RED, vert_spd=6, max_bullets_loaded=18},
+	.Missile   = Weapon{ type=.Missile,   handle="Missile",   dx=20, dy=2,  init_spd=0.4, ai_fire_rate=4,  color=.Yellow},
+	.Homer     = Weapon{ type=.Homer,     handle="Homer",     dx=5,  dy=2,  init_spd=0.4, ai_fire_rate=4,  color=.Dark_Blue},
+	.Nuke      = Weapon{ type=.Nuke,      handle="Nuke",      dx=40, dy=4,  init_spd=4,   ai_fire_rate=10, color=.Dark_Yellow},
+	.Knife     = Weapon{ type=.Knife,     handle="Knife",     dx=15, dy=1,  init_spd=20,  ai_fire_rate=6,  color=.Gray},
+	.Chain_Gun = Weapon{ type=.Chain_Gun, handle="Chain Gun", dx=20, dy=1,  init_spd=8,   ai_fire_rate=1,  color=.White},
+	.Twin 	   = Weapon{ type=.Twin, 	  handle="Twin", 	  dx=25, dy=1,  init_spd=4,   ai_fire_rate=4,  color=.Dark_Green},
+	.Wave      = Weapon{ type=.Wave,      handle="Wave",      dx=10, dy=2,  init_spd=14,  ai_fire_rate=10, color=.Red},
+	.Barrier   = Weapon{ type=.Barrier,   handle="Barrier",   dx=4,  dy=40, init_spd=4,   ai_fire_rate=8,  color=.Blue, accel=0.1},
+	.Splitter  = Weapon{ type=.Splitter,  handle="Splitter",  dx=20, dy=2,  init_spd=15,  ai_fire_rate=4,  color=.Dark_Red, vert_spd=6, max_bullets_loaded=18},
 }
 
 // procedures
 game :: proc() {
-	qv.create_window("Arsenal", .SEVEN_TWENTY_P, .FOUR_BIT)
+	qv.create_window("Arsenal", .SEVEN_TWENTY_P)
 	sw = qv.get_screen_width()
 	sh = qv.get_screen_height()
 	
@@ -135,11 +135,11 @@ game :: proc() {
 }
 
 title :: proc() {
-	qv.clear_screen(.BLACK)
+	qv.clear_screen(.Black)
 	for i in 1..=60 {
 		phase := math.sin_f32(0.5*f32(i)+qv.get_elapsed_time()*3)
-		qv.sizeable_line(qv.Point{i*sw/60, 1}, qv.Point{sw, i*sh/60}, .DARK_RED, phase+1.2)
-		qv.sizeable_line(qv.Point{1, i*sh/60}, qv.Point{i*sw/60, sh}, .DARK_RED, phase+2.0)
+		qv.sizeable_line(qv.Point{i*sw/60, 1}, qv.Point{sw, i*sh/60}, .Dark_Red, phase+1.2)
+		qv.sizeable_line(qv.Point{1, i*sh/60}, qv.Point{i*sw/60, sh}, .Dark_Red, phase+2.0)
 	}
 
 	title := "r10u30r5f30 u30r20d20l20f10r15 r20u15l20u15r20br5 nr20d15nr20d15r25 u30r5f30r5u30br5 nd30r5f30br5 nu30r20"
@@ -150,57 +150,57 @@ title :: proc() {
 	qv.draw("bm790,420 c9 s4")
 	qv.draw(author)
 
-	qv.print_centered("Press any key to start", qv.get_text_rows()-5, .GRAY)
+	qv.print_centered("Press any key to start", qv.get_text_rows()-5, .Gray)
 }
 
 intro :: proc() {
-	qv.clear_screen(.BLACK)
+	qv.clear_screen(.Black)
 
 	qv.set_typing_speed(system_typing_speed)
-	qv.type("Welcome to the Arsenal Network", qv.Text_Point{2, 2}, .GREEN)
+	qv.type("Welcome to the Arsenal Network", qv.Text_Point{2, 2}, .Green)
 
 	login := "mazer"
 	qv.set_typing_speed(8)
-	qv.print("Login: ", qv.Text_Point{2, 4}, .GREEN)
+	qv.print("Login: ", qv.Text_Point{2, 4}, .Green)
 	qv.wait(1000)
-	qv.type(login, qv.Text_Point{9, 4}, .CYAN)
+	qv.type(login, qv.Text_Point{9, 4}, .Cyan)
 
-	qv.print("Password: ", qv.Text_Point{2, 5}, .GREEN)
+	qv.print("Password: ", qv.Text_Point{2, 5}, .Green)
 	qv.wait(1200)
-	qv.type("*********", qv.Text_Point{12, 5}, .CYAN)
+	qv.type("*********", qv.Text_Point{12, 5}, .Cyan)
 
 	qv.set_typing_speed(system_typing_speed)
-	qv.type("Verifying........", qv.Text_Point{2, 7}, .GREEN)
-	qv.print("Access granted", qv.Text_Point{2, 8}, .GREEN)
+	qv.type("Verifying........", qv.Text_Point{2, 7}, .Green)
+	qv.print("Access granted", qv.Text_Point{2, 8}, .Green)
 	qv.wait(1000)
 
 	msg := qv.concat("Welcome to the system [", login, "]")
-	qv.type(msg, qv.Text_Point{2, 10}, .GREEN)
-	qv.type("INCOMING MESSAGE FROM COMMAND - SET PRIORITY 1", qv.Text_Point{2, 11}, .GREEN)
+	qv.type(msg, qv.Text_Point{2, 10}, .Green)
+	qv.type("INCOMING MESSAGE FROM COMMAND - SET PRIORITY 1", qv.Text_Point{2, 11}, .Green)
 
 	qv.wait(1000)
 	msg = qv.concat("Agent ", login, ", Kurali craft have been detected in sector alpha!")
-	qv.type(msg, qv.Text_Point{2, 13}, .RED)
-	qv.type("Engage and destroy all enemy craft. Kurali have destroyed Terran headquarters", qv.Text_Point{2, 14}, .RED)
-	qv.type("leaving you as our sole countermeasure. Act immediately, as there may not be", qv.Text_Point{2, 15}, .RED)
-	qv.type("much mo^D", qv.Text_Point{2, 16}, .RED)
-	qv.type("<EOF received from client>", qv.Text_Point{2, 17}, .GREEN)
+	qv.type(msg, qv.Text_Point{2, 13}, .Red)
+	qv.type("Engage and destroy all enemy craft. Kurali have destroyed Terran headquarters", qv.Text_Point{2, 14}, .Red)
+	qv.type("leaving you as our sole countermeasure. Act immediately, as there may not be", qv.Text_Point{2, 15}, .Red)
+	qv.type("much mo^D", qv.Text_Point{2, 16}, .Red)
+	qv.type("<EOF received from client>", qv.Text_Point{2, 17}, .Green)
 
-	qv.print("% ", qv.Text_Point{2, 19}, .GREEN)
+	qv.print("% ", qv.Text_Point{2, 19}, .Green)
 	qv.wait(1500)
-	qv.type("exec ./arsenal.sh", qv.Text_Point{4, 19}, .CYAN)
-	qv.type("Security clearance granted ", qv.Text_Point{2, 20}, .GREEN)
-	qv.type("Are you sure you wish to launch Arsenal? [yn] ", qv.Text_Point{2, 21}, .GREEN)
+	qv.type("exec ./arsenal.sh", qv.Text_Point{4, 19}, .Cyan)
+	qv.type("Security clearance granted ", qv.Text_Point{2, 20}, .Green)
+	qv.type("Are you sure you wish to launch Arsenal? [yn] ", qv.Text_Point{2, 21}, .Green)
 	qv.wait(1500)
-	qv.print("y", qv.Text_Point{48, 21}, .CYAN)
-	qv.type("[Ready! Press any key to launch]", qv.Text_Point{2, 24}, .WHITE)
+	qv.print("y", qv.Text_Point{48, 21}, .Cyan)
+	qv.type("[Ready! Press any key to launch]", qv.Text_Point{2, 24}, .White)
 }
 
 configure_ship :: proc() {
-	qv.clear_screen(.BLACK)
+	qv.clear_screen(.Black)
 
 	qv.set_typing_speed(system_typing_speed)
-	qv.type("Choose desired weaponry...", qv.Text_Point{2, 2}, .GREEN)
+	qv.type("Choose desired weaponry...", qv.Text_Point{2, 2}, .Green)
 }
 
 main :: proc() {
