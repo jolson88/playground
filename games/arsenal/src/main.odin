@@ -5,15 +5,21 @@ import "core:math"
 import "core:mem"
 import "qv"
 
+// structures
 Arsenal_Screen :: enum {
 	Title = 0,
 	Intro,
+	Configure_Ship,
 }
 
-sw, sh: int
+// variables
 cur_screen: Arsenal_Screen
+play_intro := false
+ship_configured := false
+sh, sw: int
 system_typing_speed := 28
 
+// procedures
 game :: proc() {
 	qv.create_window("Arsenal", .SEVEN_TWENTY_P, .FOUR_BIT)
 	sw = qv.get_screen_width()
@@ -22,6 +28,7 @@ game :: proc() {
 	qv.set_text_style(24, 0, 4)
 	for !qv.should_close() {
 		qv.begin()
+		defer qv.present()
 
 		switch cur_screen {
 		case .Title:
@@ -30,16 +37,23 @@ game :: proc() {
 				cur_screen = .Intro
 				qv.reset_frame_memory()
 			}
-
 		case .Intro:
+			if !play_intro {
+				cur_screen = .Configure_Ship
+				continue
+			}
 			intro()
 			if (qv.ready_to_continue(wait_for_keypress = true)) {
+				cur_screen = .Configure_Ship
+				qv.reset_frame_memory()
+			}
+		case .Configure_Ship:
+			configure_ship()
+			if ship_configured {
 				cur_screen = .Title
 				qv.reset_frame_memory()
 			}
 		}
-
-		qv.present()
 	}
 	qv.close()
 }
@@ -104,6 +118,13 @@ intro :: proc() {
 	qv.wait(1500)
 	qv.print("y", qv.Text_Point{48, 21}, .CYAN)
 	qv.type("[Ready! Press any key to launch]", qv.Text_Point{2, 24}, .WHITE)
+}
+
+configure_ship :: proc() {
+	qv.clear_screen(.BLACK)
+
+	qv.set_typing_speed(system_typing_speed)
+	qv.type("Choose desired weaponry...", qv.Text_Point{2, 2}, .GREEN)
 }
 
 main :: proc() {
