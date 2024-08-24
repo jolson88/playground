@@ -1,6 +1,7 @@
 package arsenal
 
 import "core:fmt"
+import "core:math"
 import "core:mem"
 import "qv"
 
@@ -21,8 +22,9 @@ game :: proc() {
 title :: proc() {
 	qv.clear(.BLACK)
 	for i in 1..=60 {
-		qv.line(qv.Point{i*sw/60, 1}, qv.Point{sw, i*sh/60}, .DARK_RED)
-		qv.line(qv.Point{1, i*sh/60}, qv.Point{i*sw/60, sh}, .DARK_RED)
+		phase := math.sin_f32(0.5*f32(i)+f32(qv.elapsed_time()*3))
+		qv.sizeable_line(qv.Point{i*sw/60, 1}, qv.Point{sw, i*sh/60}, .DARK_RED, phase+1.2)
+		qv.sizeable_line(qv.Point{1, i*sh/60}, qv.Point{i*sw/60, sh}, .DARK_RED, phase+2.0)
 	}
 
 	title := "r10u30r5f30 u30r20d20l20f10r15 r20u15l20u15r20br5 nr20d15nr20d15r25 u30r5f30r5u30br5 nd30r5f30br5 nu30r20"

@@ -38,6 +38,12 @@ Qv_State :: struct {
     eight_bit_palette: [256]rl.Color,
 }
 
+Pen_State :: struct {
+    pos:    rl.Vector2,
+    col:    int,
+    scale:  f32
+}
+
 // screen
 Screen_Mode :: enum {
     TEN_EIGHTY_P = 0,
@@ -101,6 +107,7 @@ Point :: struct {
 
 // variables
 state: Qv_State
+pen_state: Pen_State
 
 // procedures
 clear :: proc(color: Palette_Color) {
@@ -123,6 +130,10 @@ create_window :: proc(title: string, screen_mode: Screen_Mode, palette_mode: Pal
     state.four_bit_palette  = default_four_bit_palette
     state.eight_bit_palette = default_eight_bit_palette
     set_palette_mode(palette_mode)
+}
+
+elapsed_time :: proc() -> f64 {
+    return rl.GetTime()
 }
 
 screen_width :: proc() -> int {
@@ -177,23 +188,18 @@ get_color_from_int :: proc(palette_entry: int) -> rl.Color {
 }
 
 line :: proc(start: Point, end: Point, color: Palette_Color) {
-    real_color := get_color(color)
+    sizeable_line(start, end, color, 1)
+}
 
-    line_impl(rl.Vector2{f32(start.x), f32(start.y)}, rl.Vector2{f32(end.x), f32(end.y)}, 1, real_color)
+sizeable_line :: proc(start: Point, end: Point, color: Palette_Color, thickness: f32) {
+    real_color := get_color(color)
+    line_impl(rl.Vector2{f32(start.x), f32(start.y)}, rl.Vector2{f32(end.x), f32(end.y)}, thickness, real_color)
 }
 
 @(private)
 line_impl :: proc(start: rl.Vector2, end: rl.Vector2, thickness: f32, color: rl.Color) {
     rl.DrawLineEx(start, end, thickness, color)
 }
-
-Pen_State :: struct {
-    pos:    rl.Vector2,
-    col:    int,
-    scale:  f32
-}
-
-pen_state: Pen_State
 
 draw :: proc(src: string) {
     cmds, idx, err := parse_draw_commands(src, context.temp_allocator)
@@ -220,7 +226,7 @@ draw :: proc(src: string) {
             }
             if !cmd.pen_up {
                 col := get_color_from_int(pen_state.col)
-                line_impl(begin_pos, dest_pos, 1, col)
+                line_impl(begin_pos, dest_pos, pen_state.scale, col)
             }
             if !cmd.return_to_pos {
                 pen_state.pos = dest_pos
@@ -230,7 +236,7 @@ draw :: proc(src: string) {
             dest_pos  := rl.Vector2{f32(cmd.param_1), f32(cmd.param_2)}
             if !cmd.pen_up {
                 col := get_color_from_int(pen_state.col)
-                line_impl(begin_pos, dest_pos, 1, col)
+                line_impl(begin_pos, dest_pos, pen_state.scale, col)
             }
             if !cmd.return_to_pos {
                 pen_state.pos = dest_pos
