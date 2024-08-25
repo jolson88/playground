@@ -84,15 +84,15 @@ ship_configured := false
 sh, sw: int
 system_typing_speed := 28
 weapons := map[Weapon_Type]Weapon{
-	.Missile   = Weapon{ type=.Missile,   handle="Missile",   dx=20, dy=2,  init_spd=0.4, ai_fire_rate=4,  color=.Yellow},
-	.Homer     = Weapon{ type=.Homer,     handle="Homer",     dx=5,  dy=2,  init_spd=0.4, ai_fire_rate=4,  color=.Dark_Blue},
-	.Nuke      = Weapon{ type=.Nuke,      handle="Nuke",      dx=40, dy=4,  init_spd=4,   ai_fire_rate=10, color=.Dark_Yellow},
-	.Knife     = Weapon{ type=.Knife,     handle="Knife",     dx=15, dy=1,  init_spd=20,  ai_fire_rate=6,  color=.Gray},
-	.Chain_Gun = Weapon{ type=.Chain_Gun, handle="Chain Gun", dx=20, dy=1,  init_spd=8,   ai_fire_rate=1,  color=.White},
-	.Twin 	   = Weapon{ type=.Twin, 	  handle="Twin", 	  dx=25, dy=1,  init_spd=4,   ai_fire_rate=4,  color=.Dark_Green},
-	.Wave      = Weapon{ type=.Wave,      handle="Wave",      dx=10, dy=2,  init_spd=14,  ai_fire_rate=10, color=.Red},
-	.Barrier   = Weapon{ type=.Barrier,   handle="Barrier",   dx=4,  dy=40, init_spd=4,   ai_fire_rate=8,  color=.Blue, accel=0.1},
-	.Splitter  = Weapon{ type=.Splitter,  handle="Splitter",  dx=20, dy=2,  init_spd=15,  ai_fire_rate=4,  color=.Dark_Red, vert_spd=6, max_bullets_loaded=18},
+	.Missile   = Weapon{ type=.Missile,   handle="Missile",   dx=20, dy=2,  init_spd=0.4, ai_fire_rate=4,  color=.Yellow,      player_level=1, enemy_level=1},
+	.Homer     = Weapon{ type=.Homer,     handle="Homer",     dx=5,  dy=2,  init_spd=0.4, ai_fire_rate=4,  color=.Dark_Blue,   player_level=1, enemy_level=1},
+	.Nuke      = Weapon{ type=.Nuke,      handle="Nuke",      dx=40, dy=4,  init_spd=4,   ai_fire_rate=10, color=.Dark_Yellow, player_level=1, enemy_level=1},
+	.Knife     = Weapon{ type=.Knife,     handle="Knife",     dx=15, dy=1,  init_spd=20,  ai_fire_rate=6,  color=.Gray,        player_level=1, enemy_level=1},
+	.Chain_Gun = Weapon{ type=.Chain_Gun, handle="Chain Gun", dx=20, dy=1,  init_spd=8,   ai_fire_rate=1,  color=.White,       player_level=1, enemy_level=1},
+	.Twin 	   = Weapon{ type=.Twin, 	  handle="Twin", 	  dx=25, dy=1,  init_spd=4,   ai_fire_rate=4,  color=.Dark_Green,  player_level=1, enemy_level=1},
+	.Wave      = Weapon{ type=.Wave,      handle="Wave",      dx=10, dy=2,  init_spd=14,  ai_fire_rate=10, color=.Red,   	   player_level=1, enemy_level=1},
+	.Barrier   = Weapon{ type=.Barrier,   handle="Barrier",   dx=4,  dy=40, init_spd=4,   ai_fire_rate=8,  color=.Blue, 	   player_level=1, enemy_level=1, accel=0.1},
+	.Splitter  = Weapon{ type=.Splitter,  handle="Splitter",  dx=20, dy=2,  init_spd=15,  ai_fire_rate=4,  color=.Dark_Red,    player_level=1, enemy_level=1, vert_spd=6, max_bullets_loaded=18},
 }
 
 // procedures
@@ -110,6 +110,7 @@ game :: proc() {
 		case .Title:
 			title()
 			if (qv.ready_to_continue(wait_for_keypress = true)) {
+				init()
 				cur_screen = .Intro
 				qv.reset_frame_memory()
 			}
@@ -201,6 +202,29 @@ configure_ship :: proc() {
 
 	qv.set_typing_speed(system_typing_speed)
 	qv.type("Choose desired weaponry...", qv.Text_Point{2, 2}, .Green)
+}
+
+init :: proc() {
+	player.cur_weapon.player_level = 1
+	enemy.cur_weapon.enemy_level = 1
+		  
+	player.x = 30
+	player.y = sh / 2
+	player.hp = 50
+	player.hp_max = 50
+	player.spd = 3
+	player.dx = 14
+	player.dy = 6
+	player.status = .Alive
+ 
+	enemy.x = sw - 40
+	enemy.y = sh / 2
+	enemy.hp = 100
+	enemy.hp_max = 100
+	enemy.spd = 3
+	enemy.dx = 14
+	enemy.dy = 6
+	enemy.status = .Alive
 }
 
 load_weapons :: proc(which: Owner) {
