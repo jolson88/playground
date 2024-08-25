@@ -7,22 +7,22 @@ import rl "vendor:raylib"
 
 // structures
 Default_Color :: enum {
-    Black = 0,
-    Dark_Blue,
-    Dark_Green,
-    Dark_Cyan,
-    Dark_Red,
-    Dark_Magenta,
-    Dark_Yellow,
-    Dark_White,
-    Gray,
-    Blue,
-    Green,
-    Cyan,
-    Red,
-    Magenta,
-    Yellow,
-    White,
+    Black        = 0,
+    Dark_Blue    = 1,
+    Dark_Green   = 2,
+    Dark_Cyan    = 3,
+    Dark_Red     = 4,
+    Dark_Magenta = 5,
+    Dark_Yellow  = 6,
+    Dark_White   = 7,
+    Gray         = 8,
+    Blue         = 9,
+    Green        = 10,
+    Cyan         = 11,
+    Red          = 12,
+    Magenta      = 13,
+    Yellow       = 14,
+    White        = 15,
 }
 
 Palette_Color :: union {
@@ -162,6 +162,8 @@ create_window :: proc(title: string, screen_mode: Screen_Mode) {
     rl.SetTargetFPS(60)
     state.frame_dur = 60 / 1000
     state.palette = default_palette
+
+    //rl.SetRandomSeed(u32(time.to_unix_nanoseconds(time.now())))
 }
 
 draw :: proc(src: string) {
