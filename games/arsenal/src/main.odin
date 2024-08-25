@@ -52,10 +52,8 @@ Weapon :: struct {
 	handle: string,
 	power: int,
 	vert_spd: int,
-	player_level: int,
-	enemy_level: int,
-	dx: int,
-	dy: int,
+	enemy_level, player_level: int,
+	dx, dy: int,
 	accel: f32,
 	init_spd: f32,
 	hp_max: int,
@@ -79,6 +77,8 @@ Weapon_Type :: enum {
 
 // variables
 cur_screen: Arsenal_Screen
+enemy, player: Entity
+enemy_bullets, player_bullets: [20]Entity
 play_intro := false
 ship_configured := false
 sh, sw: int
@@ -201,6 +201,168 @@ configure_ship :: proc() {
 
 	qv.set_typing_speed(system_typing_speed)
 	qv.type("Choose desired weaponry...", qv.Text_Point{2, 2}, .Green)
+}
+
+load_weapons :: proc(which: Owner) {
+	missile := weapons[.Missile]
+	if which == .Player {
+		if player.cur_weapon.type == .Missile {
+			missile.player_level = player.cur_weapon.player_level
+		}
+		missile.power = player.cur_weapon.player_level + 4
+		missile.accel = f32(player.cur_weapon.player_level + 3) / 10
+	} else {
+		if enemy.cur_weapon.type == .Missile {
+			missile.enemy_level = enemy.cur_weapon.enemy_level
+		}
+		missile.power = enemy.cur_weapon.enemy_level + 4
+		missile.accel = f32(enemy.cur_weapon.enemy_level + 3) / 10
+	}
+	weapons[.Missile] = missile
+
+	homer := weapons[.Homer]
+	if which == .Player {
+		if player.cur_weapon.type == .Homer {
+			homer.player_level = player.cur_weapon.player_level
+		}
+		homer.power = player.cur_weapon.player_level + 2
+		homer.accel = f32(player.cur_weapon.player_level / 10)
+		homer.vert_spd = 1 + (player.cur_weapon.player_level / 10)
+	} else {
+		if enemy.cur_weapon.type == .Homer {
+			homer.enemy_level = enemy.cur_weapon.enemy_level
+		}
+		homer.power = enemy.cur_weapon.enemy_level + 2
+		homer.accel = f32(enemy.cur_weapon.enemy_level / 10)
+		homer.vert_spd = 1 + (enemy.cur_weapon.enemy_level / 10)
+	}
+   	weapons[.Homer] = homer
+
+	nuke := weapons[.Nuke]
+	if which == .Player {
+		if player.cur_weapon.type == .Nuke {
+			nuke.player_level = player.cur_weapon.player_level
+		}
+		nuke.power = player.cur_weapon.player_level * 2 + 10
+		nuke.accel = f32(player.cur_weapon.player_level / 10)
+		nuke.hp_max = 20 + (player.cur_weapon.player_level * 2)
+		nuke.max_bullets_loaded = player.cur_weapon.player_level + 4
+	} else {
+		if enemy.cur_weapon.type == .Nuke {
+			nuke.enemy_level = enemy.cur_weapon.enemy_level
+		}
+		nuke.power = enemy.cur_weapon.enemy_level * 5 + 3
+		nuke.accel = f32(enemy.cur_weapon.enemy_level / 10)
+		nuke.hp_max = 20 + (enemy.cur_weapon.enemy_level * 2)
+		nuke.max_bullets_loaded = enemy.cur_weapon.enemy_level + 4
+	}
+	if nuke.max_bullets_loaded > len(player_bullets) {
+		nuke.max_bullets_loaded = len(player_bullets)
+	}
+	weapons[.Nuke] = nuke
+
+	knife := weapons[.Knife]
+	if which == .Player {
+		if player.cur_weapon.type == .Knife {
+			knife.player_level = player.cur_weapon.player_level
+		}
+		knife.power = player.cur_weapon.player_level + 1
+		knife.accel = f32(player.cur_weapon.player_level / 5)
+		knife.max_bullets_loaded = player.cur_weapon.player_level + 3
+	} else {
+		if enemy.cur_weapon.type == .Knife {
+			knife.enemy_level = enemy.cur_weapon.enemy_level
+		}
+		knife.power = enemy.cur_weapon.enemy_level + 1
+		knife.accel = f32(enemy.cur_weapon.enemy_level / 5)
+		knife.max_bullets_loaded = enemy.cur_weapon.enemy_level + 3
+	}
+	weapons[.Knife] = knife
+
+	chain_gun := weapons[.Chain_Gun]
+	if which == .Player {
+		if player.cur_weapon.type == .Chain_Gun {
+			chain_gun.player_level = player.cur_weapon.player_level
+		}
+		chain_gun.power = player.cur_weapon.player_level + 2
+		chain_gun.accel = f32(player.cur_weapon.player_level + 3 / 10)
+	} else {
+		if enemy.cur_weapon.type == .Chain_Gun {
+			chain_gun.enemy_level = enemy.cur_weapon.enemy_level
+		}
+		chain_gun.power = enemy.cur_weapon.enemy_level + 2
+		chain_gun.accel = f32(enemy.cur_weapon.enemy_level + 3 / 10)
+	}
+	weapons[.Chain_Gun] = chain_gun
+
+	twin := weapons[.Twin]
+	if which == .Player {
+		if player.cur_weapon.type == .Twin {
+			twin.player_level = player.cur_weapon.player_level
+		}
+		twin.power = player.cur_weapon.player_level + 3
+		twin.accel = f32(player.cur_weapon.player_level + 3 / 10)
+	} else {
+		if enemy.cur_weapon.type == .Twin {
+			twin.enemy_level = enemy.cur_weapon.enemy_level
+		}
+		twin.power = enemy.cur_weapon.enemy_level + 3
+		twin.accel = f32(enemy.cur_weapon.enemy_level + 3 / 10)
+	}
+	weapons[.Twin] = twin
+
+	wave := weapons[.Wave]
+	if which == .Player {
+		if player.cur_weapon.type == .Wave {
+			wave.player_level = player.cur_weapon.player_level
+		}
+		wave.power = player.cur_weapon.player_level + 5
+		wave.accel = 0
+	} else {
+		if enemy.cur_weapon.type == .Wave {
+			wave.enemy_level = enemy.cur_weapon.enemy_level
+		}
+		wave.power = enemy.cur_weapon.enemy_level + 5
+		wave.accel = 0
+	}
+	weapons[.Wave] = wave
+
+	barrier := weapons[.Barrier]
+	if which == .Player {
+		if player.cur_weapon.type == .Barrier {
+			barrier.player_level = player.cur_weapon.player_level
+			barrier.hp_max = 40 + (player.cur_weapon.player_level * 2)
+			barrier.max_bullets_loaded = player.cur_weapon.player_level / 5 + 4
+			barrier.power = player.cur_weapon.player_level + 2
+		}
+	} else {
+		if enemy.cur_weapon.type == .Barrier {
+			barrier.enemy_level = enemy.cur_weapon.enemy_level
+			barrier.power = enemy.cur_weapon.enemy_level + 2
+			barrier.hp_max = 40 + (enemy.cur_weapon.enemy_level * 2)
+			barrier.max_bullets_loaded = enemy.cur_weapon.enemy_level / 5 + 4
+		}
+	}
+	if barrier.max_bullets_loaded > len(player_bullets) {
+		barrier.max_bullets_loaded = len(player_bullets)
+	}
+	weapons[.Barrier] = barrier
+
+	splitter := weapons[.Splitter]
+	if which == .Player {
+		if player.cur_weapon.type == .Splitter {
+			splitter.player_level = player.cur_weapon.player_level
+		}
+		splitter.power = player.cur_weapon.player_level + 4
+		splitter.accel = f32(player.cur_weapon.player_level + 3 / 10)
+	} else {
+		if enemy.cur_weapon.type == .Splitter {
+			splitter.enemy_level = enemy.cur_weapon.enemy_level
+		}
+		splitter.power = enemy.cur_weapon.enemy_level + 4
+		splitter.accel = f32(enemy.cur_weapon.enemy_level + 3 / 10)
+	}
+	weapons[.Splitter] = splitter
 }
 
 main :: proc() {
