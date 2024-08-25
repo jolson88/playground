@@ -208,7 +208,7 @@ intro :: proc() {
 	qv.type("Engage and destroy all enemy craft. Kurali have destroyed Terran headquarters", qv.Text_Point{2, 14}, .Red)
 	qv.type("leaving you as our sole countermeasure. Act immediately, as there may not be", qv.Text_Point{2, 15}, .Red)
 	qv.type("much mo^D", qv.Text_Point{2, 16}, .Red)
-	qv.type("<EOF received from client>", qv.Text_Point{2, 17}, .Green)
+	qv.type("<EOF received from client>", qv.Text_Point{2, 17}, .Yellow)
 
 	qv.print("% ", qv.Text_Point{2, 19}, .Green)
 	qv.wait(1500)
@@ -251,7 +251,8 @@ configure_ship :: proc() {
 	qv.type("Kulari craft",  qv.Text_Point{40, 4}, .Red)
 	qv.type(fmt.tprintf("HP:     %i", enemy.hp),  qv.Text_Point{40, 5}, .Green)
 	qv.type(fmt.tprintf("Speed:  %v", enemy.spd), qv.Text_Point{40, 6}, .Green)
-	qv.type(fmt.tprintf("Weapon: %s", enemy.cur_weapon.handle), qv.Text_Point{40, 7}, .Dark_Green)
+	qv.type("Weapon: ", qv.Text_Point{40, 7}, .Green)
+	qv.type(enemy.cur_weapon.handle, qv.Text_Point{48, 7}, enemy.cur_weapon.color)
  
 	qv.type("Make a weapon selection ([ENTER] to confirm):", qv.Text_Point{2, 9}, .Dark_Green)
 	for wt in Weapon_Type {
@@ -280,7 +281,8 @@ configure_ship :: proc() {
 		ships_configured = true
 	}
 	if ships_configured {
-		qv.type(fmt.tprintf("%s selected. Hit [ENTER] to enage Kulari craft", player.cur_weapon.handle), qv.Text_Point{2, 24}, .White)
+		qv.type(player.cur_weapon.handle, qv.Text_Point{2, 24}, player.cur_weapon.color)
+		qv.type(" selected. Hit [ENTER] to enage Kulari craft", qv.Text_Point{2+len(player.cur_weapon.handle), 24}, .White)
 		if (qv.ready_to_continue(wait_for_keypress = true)) {
 			fmt.printf("\n%#v\n%#v", player, enemy)
 			fmt.printf("\n%#v\n\n", weapons)
