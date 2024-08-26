@@ -94,7 +94,7 @@ ships_configured := false
 weapon_chosen    := false
 weapons := map[Weapon_Type]Weapon{
 	.Missile   = Weapon{ type=.Missile,   handle="Missile",   dx=20, dy=4,   init_spd=0.4, ai_fire_rate=4,  color=.Yellow,  player_level=1, enemy_level=1},
-	.Homer     = Weapon{ type=.Homer,     handle="Homer",     dx=6,  dy=6,   init_spd=0.4, ai_fire_rate=4,  color=.Cyan,    player_level=1, enemy_level=1},
+	.Homer     = Weapon{ type=.Homer,     handle="Homer",     dx=10, dy=6,   init_spd=40,  ai_fire_rate=4,  color=.Cyan,    player_level=1, enemy_level=1},
 	.Nuke      = Weapon{ type=.Nuke,      handle="Nuke",      dx=40, dy=8,   init_spd=4,   ai_fire_rate=10, color=.Brown,   player_level=1, enemy_level=1},
 	.Knife     = Weapon{ type=.Knife,     handle="Knife",     dx=15, dy=4,   init_spd=800, ai_fire_rate=6,  color=.Gray,    player_level=1, enemy_level=1},
 	.Chain_Gun = Weapon{ type=.Chain_Gun, handle="Chain Gun", dx=20, dy=2,   init_spd=8,   ai_fire_rate=2,  color=.White,   player_level=1, enemy_level=1},
@@ -258,8 +258,8 @@ enemy_bullets_update :: proc() {
 				case .Homer:
 					if b.y > player.y { b.direction = .Up }
 					if b.y < player.y { b.direction = .Down }
-					if b.direction == .Down { b.y = b.y+enemy.cur_weapon.vert_spd }
-					if b.direction == .Up   { b.y = b.y-enemy.cur_weapon.vert_spd }
+					if b.direction == .Down { b.y = b.y+enemy.cur_weapon.vert_spd*rl.GetFrameTime() }
+					if b.direction == .Up   { b.y = b.y-enemy.cur_weapon.vert_spd*rl.GetFrameTime() }
 				case .Wave:
 					b.y = f32(b.yi) - 40*math.sin_f32((b.x-f32(b.xi)) / 60)
 				case .Splitter:
@@ -539,14 +539,14 @@ load_weapons :: proc(which: Owner) {
 		}
 		homer.power = player.cur_weapon.player_level + 2
 		homer.accel = f32(player.cur_weapon.player_level)  * ACCEL_FACTOR
-		homer.vert_spd = 1 + f32(player.cur_weapon.player_level) / 10
+		homer.vert_spd = 20+f32(player.cur_weapon.player_level*8)
 	} else {
 		if enemy.cur_weapon.type == .Homer {
 			homer.enemy_level = enemy.cur_weapon.enemy_level
 		}
 		homer.power = enemy.cur_weapon.enemy_level + 2
 		homer.accel = f32(enemy.cur_weapon.enemy_level) * ACCEL_FACTOR
-		homer.vert_spd = 1 + f32(enemy.cur_weapon.enemy_level) / 10
+		homer.vert_spd = 20+f32(enemy.cur_weapon.enemy_level*8)
 	}
    	weapons[.Homer] = homer
 
@@ -693,8 +693,8 @@ player_bullets_update :: proc() {
 				case .Homer:
 					if b.y > enemy.y { b.direction = .Up }
 					if b.y < enemy.y { b.direction = .Down }
-					if b.direction == .Down { b.y = b.y + player.cur_weapon.vert_spd }
-					if b.direction == .Up   { b.y = b.y - player.cur_weapon.vert_spd }
+					if b.direction == .Down { b.y = b.y + player.cur_weapon.vert_spd*rl.GetFrameTime() }
+					if b.direction == .Up   { b.y = b.y - player.cur_weapon.vert_spd*rl.GetFrameTime() }
 				case .Wave:
 					b.y = f32(b.yi) - 40*math.sin_f32((b.x-f32(b.xi)) / 60)
 				case .Splitter:
