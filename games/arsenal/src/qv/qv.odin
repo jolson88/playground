@@ -375,7 +375,7 @@ type :: proc(text: string, pos: Text_Point, color: Palette_Color) {
 
     elapsed_secs := rl.GetTime() - entry.start
     typed_chars  := int(f32(state.typing_cps) * f32(elapsed_secs))
-    if (typed_chars > len(text)) {
+    if (typed_chars >= len(text)) {
         typed_chars = len(text)
         entry.is_done = true
         state.typing_entries[text] = entry

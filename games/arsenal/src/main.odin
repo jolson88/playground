@@ -244,26 +244,26 @@ enemy_bullets_update :: proc() {
 	for &b in enemy_bullets {
 		#partial switch b.status {
 		case .Normal:
-			b.spd = b.spd + enemy.cur_weapon.accel
+			b.spd = b.spd+enemy.cur_weapon.accel
 			if b.x < 0 {
 				b.status = .Dead
 				enemy_bullets_loaded = enemy_bullets_loaded-1
 			} else {
 				b.prev_x = b.x
 				b.prev_y = b.y
-				b.x = b.x - b.spd * rl.GetFrameTime()
+				b.x = b.x-b.spd*rl.GetFrameTime()
 				#partial switch enemy.cur_weapon.type {
 				case .Homer:
 					if b.y > player.y { b.direction = .Up }
 					if b.y < player.y { b.direction = .Down }
-					if b.direction == .Down { b.y = b.y + enemy.cur_weapon.vert_spd }
-					if b.direction == .Up   { b.y = b.y - enemy.cur_weapon.vert_spd }
+					if b.direction == .Down { b.y = b.y+enemy.cur_weapon.vert_spd }
+					if b.direction == .Up   { b.y = b.y-enemy.cur_weapon.vert_spd }
 				case .Wave:
-					b.y = f32(b.yi) - 20*math.sin_f32(b.x-f32(b.xi) / 50)
+					b.y = f32(b.yi) - 20*math.sin_f32((b.x-f32(b.xi)) / 50)
 				case .Splitter:
 					if b.x < x_left_threshold {
-						if b.direction == .Down { b.y = b.y + enemy.cur_weapon.vert_spd }
-						if b.direction == .Up   { b.y = b.y - enemy.cur_weapon.vert_spd }
+						if b.direction == .Down { b.y = b.y+enemy.cur_weapon.vert_spd }
+						if b.direction == .Up   { b.y = b.y-enemy.cur_weapon.vert_spd }
 					}
 				}
 				qv.rectangle(qv.Point{b.x, b.y}, qv.Point{b.x+enemy.cur_weapon.dx, b.y+enemy.cur_weapon.dy}, enemy.cur_weapon.color)
@@ -271,7 +271,7 @@ enemy_bullets_update :: proc() {
 		case .Exploding:
 			b.exp_counter = b.exp_counter-1
 			if b.exp_counter > 0 {
-				b.x = b.x-b.spd*rl.GetFrameTime()
+				b.x = b.x+b.spd*rl.GetFrameTime()
 				qv.circle(qv.Point{b.x+enemy.cur_weapon.dx/2, b.y+enemy.cur_weapon.dy/2}, f32(b.exp_counter*4), enemy.cur_weapon.color)
 			} else {
 				b.status = .Dead
@@ -303,8 +303,8 @@ enemy_control :: proc() {
 				for &b in enemy_bullets {
 					if b.status == .Dead {
 						b.status = .Normal
-						b.x = enemy.x - enemy.dx
-						b.y = enemy.y - enemy.dy*2
+						b.x = enemy.x + enemy.dx
+						b.y = enemy.y + enemy.dy*2
 						b.spd = enemy.cur_weapon.init_spd
 						break
 					}
@@ -315,8 +315,8 @@ enemy_control :: proc() {
 				for &b in enemy_bullets {
 					if b.status == .Dead {
 						b.status = .Normal
-						b.x = enemy.x - enemy.dx
-						b.y = enemy.y + enemy.dy*2
+						b.x = enemy.x + enemy.dx
+						b.y = enemy.y - enemy.dy*2
 						b.spd = enemy.cur_weapon.init_spd
 						break
 					}
@@ -328,16 +328,18 @@ enemy_control :: proc() {
 					if enemy_bullets_loaded < max_bullets_loaded {
 						enemy_bullets_loaded = enemy_bullets_loaded+1
 						for &b in enemy_bullets {
-							b.status = .Normal
-							b.x   = enemy.x+enemy.dx+1
-							b.y   = enemy.y+(enemy.dy/2) - 1 - (enemy.cur_weapon.dy / 2)
-							b.yi  = int(b.y)
-							b.xi  = int(b.x)
-							b.spd = enemy.cur_weapon.init_spd
-							if i == 1 { b.direction = .Right }
-							if i == 2 { b.direction = .Up }
-							if i == 3 { b.direction = .Down }
-							break
+							if b.status == .Dead {
+								b.status = .Normal
+								b.x   = enemy.x+enemy.dx+1
+								b.y   = enemy.y+(enemy.dy/2) - 1 - (enemy.cur_weapon.dy / 2)
+								b.yi  = int(b.y)
+								b.xi  = int(b.x)
+								b.spd = enemy.cur_weapon.init_spd
+								if i == 1 { b.direction = .Down }
+								if i == 2 { b.direction = .Up }
+								if i == 3 { b.direction = .Left }
+								break
+							}
 						}
 					}
 				}
@@ -348,8 +350,8 @@ enemy_control :: proc() {
 				for &b in enemy_bullets {
 					if b.status == .Dead {
 						b.status = .Normal
-						b.x = enemy.x+enemy.dx+1
-						b.y = enemy.y+(enemy.dy/2) - 1 - (enemy.cur_weapon.dy / 2)
+						b.x = enemy.x-enemy.cur_weapon.dx-1
+						b.y = enemy.y+(enemy.dy/2) - (enemy.cur_weapon.dy/2)
 						b.yi = int(b.y)
 						b.xi = int(b.x)
 						b.spd = enemy.cur_weapon.init_spd
@@ -416,6 +418,7 @@ init :: proc() {
 	enemy.dx = 24
 	enemy.dy = 24
 	enemy.status = .Normal
+	enemy.cur_weapon = weapons[rand.choice_enum(Weapon_Type)]
 }
 
 load_settings :: proc() {
@@ -472,7 +475,6 @@ load_settings :: proc() {
 		enemy.y = f32(sh / 2)
 		enemy.status = .Normal
 		load_weapons(.Enemy)
-		enemy.cur_weapon = weapons[rand.choice_enum(Weapon_Type)]
 
 		ships_configured = true
 	}
@@ -669,7 +671,7 @@ player_bullets_update :: proc() {
 					if b.direction == .Down { b.y = b.y + player.cur_weapon.vert_spd }
 					if b.direction == .Up   { b.y = b.y - player.cur_weapon.vert_spd }
 				case .Wave:
-					b.y = f32(b.yi) - 20*math.sin_f32(b.x-f32(b.xi) / 50)
+					b.y = f32(b.yi) - 20*math.sin_f32((b.x-f32(b.xi)) / 50)
 				case .Splitter:
 					if b.x > x_right_threshold {
 						if b.direction == .Down { b.y = b.y + player.cur_weapon.vert_spd }
