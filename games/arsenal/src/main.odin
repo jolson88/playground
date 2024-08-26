@@ -13,7 +13,6 @@ Arsenal_Screen :: enum {
 	Intro,
 	Configure_Ship,
 	Battle,
-	Destruction,
 	Victory,
 }
 
@@ -49,6 +48,11 @@ Owner :: enum {
 	Unknown = 0,
 	Enemy,
 	Player,
+}
+
+Rect :: struct {
+	left, right, top, bottom: f32,
+	delta: f32,
 }
 
 Weapon :: struct {
@@ -106,7 +110,124 @@ weapons := map[Weapon_Type]Weapon{
 
 // procedures
 check_collisions :: proc() {
+	r1, r2: Rect
 
+	for &pb in player_bullets {
+		if pb.status == .Dead {
+			continue
+		}
+		for &eb in enemy_bullets {
+			if eb.status == .Dead {
+				continue
+			}
+			r1.right = pb.x
+			r1.top = pb.y
+			r1.bottom = pb.y + player.cur_weapon.dy
+			r2.left = eb.x - enemy.cur_weapon.dx
+			r2.top = eb.y
+			r2.bottom = eb.y + enemy.cur_weapon.dy
+
+			if pb.x - pb.prev_x < player.cur_weapon.dx {
+				r1.delta = player.cur_weapon.dx
+			} else {
+				r1.delta = pb.x - pb.prev_x
+			}
+			if eb.prev_x - eb.x < enemy.cur_weapon.dx {
+				r2.delta = enemy.cur_weapon.dx
+			} else {
+				r2.delta = eb.prev_x - eb.x
+			}
+			r1.left = r1.right - r1.delta
+			r2.right = r2.left + r2.delta
+			if !(r1.left > r2.right || r2.left > r1.right || r1.top > r2.bottom || r2.top > r1.bottom) {
+				if player.cur_weapon.type == .Nuke || player.cur_weapon.type == .Barrier {
+					pb.hp = pb.hp - enemy.cur_weapon.power
+					if pb.hp <= 0 {
+						pb.status = .Exploding
+						pb.exp_counter = 40
+					}
+				} else {
+					if player.cur_weapon.type != .Knife {
+						pb.status = .Exploding
+						pb.exp_counter = 10
+					}
+				}
+					
+				if enemy.cur_weapon.type == .Nuke || enemy.cur_weapon.type == .Barrier {
+					eb.hp = eb.hp - player.cur_weapon.power
+					if eb.hp <= 0 {
+						eb.status = .Exploding
+						eb.exp_counter = 40
+					}
+				} else {
+					if enemy.cur_weapon.type != .Knife {
+						eb.status = .Exploding
+						eb.exp_counter = 10
+					}
+				}
+			}
+		}
+		 
+		if enemy.status != .Exploding {
+			r1.right = pb.x
+			r1.top = pb.y
+			r1.bottom = pb.y + player.cur_weapon.dy
+			if pb.x - pb.prev_x < player.cur_weapon.dx {
+				r1.delta = player.cur_weapon.dx
+			} else {
+				r1.delta = pb.x - pb.prev_x
+			}
+			r1.left = r1.right - r1.delta
+			r2.left = enemy.x - enemy.dx
+			r2.right = enemy.x
+			r2.top = enemy.y
+			r2.bottom = enemy.y + enemy.dy
+		
+			if !(r1.left > r2.right || r2.left > r1.right || r1.top > r2.bottom || r2.top > r1.bottom) {
+				pb.status = .Exploding
+				if player.cur_weapon.type == .Nuke {
+					pb.exp_counter = 40
+				} else {
+					pb.exp_counter = 10
+				}
+				enemy.status = .Exploding
+				enemy.exp_counter = 20
+				enemy.hp = enemy.hp - player.cur_weapon.power
+				if enemy.hp < 0 { enemy.hp = 0 }
+			}
+		}
+	}
+ 
+	for &eb in enemy_bullets {
+		if eb.status == .Normal && player.status != .Exploding {
+			r1.right = player.x
+			r1.top = player.y
+			r1.bottom = player.y + player.dy
+			r1.left = player.x - player.dx
+			
+			r2.left = eb.x - enemy.cur_weapon.dx
+			r2.top = eb.y
+			r2.bottom = eb.y + enemy.cur_weapon.dy
+			if eb.prev_x - eb.x < enemy.cur_weapon.dx {
+				r2.delta = enemy.cur_weapon.dx
+			} else {
+				r2.delta = eb.prev_x - eb.x
+			}
+			r2.right = r2.left + r2.delta
+			if !(r1.left > r2.right || r2.left > r1.right || r1.top > r2.bottom || r2.top > r1.bottom) {
+				eb.status = .Exploding
+				if enemy.cur_weapon.type == .Nuke {
+					eb.exp_counter = 40
+				} else {
+					eb.exp_counter = 10
+				}
+				player.status = .Exploding
+				player.exp_counter = 20
+				player.hp = player.hp - enemy.cur_weapon.power
+				if player.hp < 0 { player.hp = 0 }
+			}
+		}
+	}
 }
 
 destruction :: proc() {
@@ -134,6 +255,10 @@ do_game :: proc() {
 
 	player_bullets_update()
 	enemy_bullets_update()
+	
+	if player.hp <= 0 || enemy.hp <= 0 {
+		destruction()
+	}
 }
 
 do_intro :: proc() {
@@ -209,8 +334,6 @@ do_loop :: proc() {
 			load_settings()
 		case .Battle:
 			do_game()
-		case .Destruction:
-			destruction()
 		case .Victory:
 			victory()
 		}
@@ -274,7 +397,7 @@ enemy_bullets_update :: proc() {
 			b.exp_counter = b.exp_counter-1
 			if b.exp_counter > 0 {
 				b.x = b.x+b.spd*rl.GetFrameTime()
-				qv.circle(qv.Point{b.x+enemy.cur_weapon.dx/2, b.y+enemy.cur_weapon.dy/2}, f32(b.exp_counter*4), enemy.cur_weapon.color)
+				qv.circle(qv.Point{b.x+enemy.cur_weapon.dx/2, b.y+enemy.cur_weapon.dy/2}, f32(b.exp_counter*3), enemy.cur_weapon.color)
 			} else {
 				b.status = .Dead
 				enemy_bullets_loaded = enemy_bullets_loaded-1
@@ -415,7 +538,7 @@ enemy_graphics :: proc() {
 		if enemy.exp_counter <= 0 {
 			enemy.status = .Normal
 		}
-		qv.circle(qv.Point{enemy.x+enemy.dx/2, enemy.y+enemy.dy/2}, f32(enemy.exp_counter * 8), .Blue)
+		qv.circle(qv.Point{enemy.x+enemy.dx/2, enemy.y+enemy.dy/2}, f32(enemy.exp_counter * 5), .Blue)
 	}
 }
 
@@ -709,7 +832,7 @@ player_bullets_update :: proc() {
 			b.exp_counter = b.exp_counter-1
 			if b.exp_counter > 0 {
 				b.x = b.x-b.spd*rl.GetFrameTime()
-				qv.circle(qv.Point{b.x+player.cur_weapon.dx/2, b.y+player.cur_weapon.dy/2}, f32(b.exp_counter*4), player.cur_weapon.color)
+				qv.circle(qv.Point{b.x+player.cur_weapon.dx/2, b.y+player.cur_weapon.dy/2}, f32(b.exp_counter*3), player.cur_weapon.color)
 			} else {
 				b.status = .Dead
 				player_bullets_loaded = player_bullets_loaded-1
@@ -856,7 +979,7 @@ player_graphics :: proc() {
 		if player.exp_counter <= 0 {
 			player.status = .Normal
 		}
-		qv.circle(qv.Point{player.x+player.dx/2, player.y+player.dy/2}, f32(player.exp_counter * 8), .Red)
+		qv.circle(qv.Point{player.x+player.dx/2, player.y+player.dy/2}, f32(player.exp_counter * 5), .Red)
 	}
 }
 
