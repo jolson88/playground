@@ -99,7 +99,7 @@ weapons := map[Weapon_Type]Weapon{
 	.Knife     = Weapon{ type=.Knife,     handle="Knife",     dx=15, dy=4,  init_spd=800, ai_fire_rate=6,  color=.Gray,    player_level=1, enemy_level=1},
 	.Chain_Gun = Weapon{ type=.Chain_Gun, handle="Chain Gun", dx=20, dy=2,  init_spd=8,   ai_fire_rate=2,  color=.White,   player_level=1, enemy_level=1},
 	.Twin 	   = Weapon{ type=.Twin, 	  handle="Twin", 	  dx=25, dy=2,  init_spd=4,   ai_fire_rate=4,  color=.Green,   player_level=1, enemy_level=1},
-	.Wave      = Weapon{ type=.Wave,      handle="Wave",      dx=10, dy=4,  init_spd=14,  ai_fire_rate=10, color=.Magenta, player_level=1, enemy_level=1},
+	.Wave      = Weapon{ type=.Wave,      handle="Wave",      dx=10, dy=6,  init_spd=500, ai_fire_rate=6,  color=.Magenta, player_level=1, enemy_level=1},
 	.Barrier   = Weapon{ type=.Barrier,   handle="Barrier",   dx=4,  dy=80, init_spd=4,   ai_fire_rate=8,  color=.Blue,    player_level=1, enemy_level=1, accel=0.1},
 	.Splitter  = Weapon{ type=.Splitter,  handle="Splitter",  dx=20, dy=4,  init_spd=15,  ai_fire_rate=4,  color=.Green,   player_level=1, enemy_level=1, vert_spd=6, max_bullets_loaded=18},
 }
@@ -261,7 +261,7 @@ enemy_bullets_update :: proc() {
 					if b.direction == .Down { b.y = b.y+enemy.cur_weapon.vert_spd }
 					if b.direction == .Up   { b.y = b.y-enemy.cur_weapon.vert_spd }
 				case .Wave:
-					b.y = f32(b.yi) - 20*math.sin_f32((b.x-f32(b.xi)) / 50)
+					b.y = f32(b.yi) - 40*math.sin_f32((b.x-f32(b.xi)) / 60)
 				case .Splitter:
 					if b.x < x_left_threshold {
 						if b.direction == .Down { b.y = b.y+enemy.cur_weapon.vert_spd }
@@ -442,7 +442,7 @@ init :: proc() {
 	enemy.status = .Normal
 	load_weapons(.Enemy)
 
-	enemy.cur_weapon = weapons[.Twin]
+	enemy.cur_weapon = weapons[.Wave]
 	// TODO: Re-enable random after weapons testing
 	//enemy.cur_weapon = weapons[rand.choice_enum(Weapon_Type)]
 	load_weapons(.Enemy)
@@ -698,7 +698,7 @@ player_bullets_update :: proc() {
 					if b.direction == .Down { b.y = b.y + player.cur_weapon.vert_spd }
 					if b.direction == .Up   { b.y = b.y - player.cur_weapon.vert_spd }
 				case .Wave:
-					b.y = f32(b.yi) - 20*math.sin_f32((b.x-f32(b.xi)) / 50)
+					b.y = f32(b.yi) - 40*math.sin_f32((b.x-f32(b.xi)) / 60)
 				case .Splitter:
 					if b.x > x_right_threshold {
 						if b.direction == .Down { b.y = b.y + player.cur_weapon.vert_spd }
