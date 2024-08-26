@@ -79,6 +79,10 @@ Weapon_Type :: enum {
 }
 
 // variables
+CHAINGUN_COOLDOWN_MS     :: 50
+DEFAULT_TYPING_SPEED_CPS :: 200
+INTRO_DISABLED           :: true
+
 sh, sw: int
 cur_screen: Arsenal_Screen
 enemy, player: Entity
@@ -86,16 +90,14 @@ enemy_bullets, player_bullets: [20]Entity
 enemy_bullets_loaded, player_bullets_loaded: int
 x_right_threshold, x_left_threshold: f32
 
-system_typing_speed := 56
-play_intro       := false
 ships_configured := false
 weapon_chosen    := false
 weapons := map[Weapon_Type]Weapon{
 	.Missile   = Weapon{ type=.Missile,   handle="Missile",   dx=20, dy=4,  init_spd=0.4, ai_fire_rate=4,  color=.Yellow,     player_level=1, enemy_level=1},
-	.Homer     = Weapon{ type=.Homer,     handle="Homer",     dx=5,  dy=4,  init_spd=0.4, ai_fire_rate=4,  color=.Cyan,       player_level=1, enemy_level=1},
+	.Homer     = Weapon{ type=.Homer,     handle="Homer",     dx=6,  dy=6,  init_spd=0.4, ai_fire_rate=4,  color=.Cyan,       player_level=1, enemy_level=1},
 	.Nuke      = Weapon{ type=.Nuke,      handle="Nuke",      dx=40, dy=8,  init_spd=4,   ai_fire_rate=10, color=.Red, 		  player_level=1, enemy_level=1},
 	.Knife     = Weapon{ type=.Knife,     handle="Knife",     dx=15, dy=2,  init_spd=20,  ai_fire_rate=6,  color=.Gray,       player_level=1, enemy_level=1},
-	.Chain_Gun = Weapon{ type=.Chain_Gun, handle="Chain Gun", dx=20, dy=2,  init_spd=8,   ai_fire_rate=1,  color=.White,      player_level=1, enemy_level=1},
+	.Chain_Gun = Weapon{ type=.Chain_Gun, handle="Chain Gun", dx=20, dy=2,  init_spd=8,   ai_fire_rate=2,  color=.White,      player_level=1, enemy_level=1},
 	.Twin 	   = Weapon{ type=.Twin, 	  handle="Twin", 	  dx=25, dy=2,  init_spd=4,   ai_fire_rate=4,  color=.Green,      player_level=1, enemy_level=1},
 	.Wave      = Weapon{ type=.Wave,      handle="Wave",      dx=10, dy=4,  init_spd=14,  ai_fire_rate=10, color=.Magenta,	  player_level=1, enemy_level=1},
 	.Barrier   = Weapon{ type=.Barrier,   handle="Barrier",   dx=4,  dy=80, init_spd=4,   ai_fire_rate=8,  color=.Blue, 	  player_level=1, enemy_level=1, accel=0.1},
@@ -137,7 +139,8 @@ do_game :: proc() {
 do_intro :: proc() {
 	qv.clear_screen(.Black)
 
-	qv.set_typing_speed(system_typing_speed)
+	qv.set_typing_speed(DEFAULT_TYPING_SPEED_CPS)
+
 	qv.type("Welcome to the Arsenal Network", qv.Text_Point{2, 2}, .Green)
 
 	login := "mazer"
@@ -145,12 +148,12 @@ do_intro :: proc() {
 	qv.print("Login: ", qv.Text_Point{2, 4}, .Green)
 	qv.wait(1000)
 	qv.type(login, qv.Text_Point{9, 4}, .Cyan)
-
 	qv.print("Password: ", qv.Text_Point{2, 5}, .Green)
 	qv.wait(1200)
 	qv.type("*********", qv.Text_Point{12, 5}, .Cyan)
 
-	qv.set_typing_speed(system_typing_speed)
+	qv.set_typing_speed(DEFAULT_TYPING_SPEED_CPS)
+
 	qv.type("Verifying........", qv.Text_Point{2, 7}, .Green)
 	qv.print("Access granted", qv.Text_Point{2, 8}, .Green)
 	qv.wait(1000)
@@ -158,7 +161,6 @@ do_intro :: proc() {
 	msg := qv.concat("Welcome to the system [", login, "]")
 	qv.type(msg, qv.Text_Point{2, 10}, .Green)
 	qv.type("INCOMING MESSAGE FROM COMMAND - SET PRIORITY 1", qv.Text_Point{2, 11}, .Green)
-
 	qv.wait(1000)
 	msg = qv.concat("Agent ", login, ", Kurali craft have been detected in sector alpha!")
 	qv.type(msg, qv.Text_Point{2, 13}, .Red)
@@ -198,7 +200,7 @@ do_loop :: proc() {
 		case .Title:
 			do_title()
 		case .Intro:
-			if !play_intro {
+			if INTRO_DISABLED {
 				cur_screen = .Configure_Ship
 				continue
 			}
@@ -244,14 +246,14 @@ enemy_bullets_update :: proc() {
 	for &b in enemy_bullets {
 		#partial switch b.status {
 		case .Normal:
-			b.spd = b.spd+enemy.cur_weapon.accel
+			b.spd = b.spd + enemy.cur_weapon.accel
 			if b.x < 0 {
 				b.status = .Dead
 				enemy_bullets_loaded = enemy_bullets_loaded-1
 			} else {
 				b.prev_x = b.x
 				b.prev_y = b.y
-				b.x = b.x-b.spd*rl.GetFrameTime()
+				b.x = b.x - b.spd * rl.GetFrameTime()
 				#partial switch enemy.cur_weapon.type {
 				case .Homer:
 					if b.y > player.y { b.direction = .Up }
@@ -283,12 +285,13 @@ enemy_bullets_update :: proc() {
 }
 
 enemy_control :: proc() {
+	@(static)chaingun_cooldown: f32
 	max_bullets_loaded: int
   
 	if int(rand.float32() * 20) + 1 == 1 {
 		enemy.direction = .Up if enemy.direction == .Down else .Down
 	}
-	if int(rand.float32() * f32(enemy.cur_weapon.ai_fire_rate)) + 1 == 1 {
+	if enemy.cur_weapon.type != .Chain_Gun && int(rand.float32() * f32(enemy.cur_weapon.ai_fire_rate)) + 1 == 1 {
 		cur_type := enemy.cur_weapon.type
 		if cur_type == .Splitter || cur_type == .Barrier || cur_type == .Nuke || cur_type == .Knife {
 			max_bullets_loaded = enemy.cur_weapon.max_bullets_loaded
@@ -364,6 +367,25 @@ enemy_control :: proc() {
 			}
 		}
 	}
+
+	if chaingun_cooldown <= 0 && enemy.cur_weapon.type == .Chain_Gun {
+		if enemy_bullets_loaded < len(enemy_bullets) {
+			for &b in enemy_bullets {
+				if b.status == .Dead {
+					b.status = .Normal
+					b.x = enemy.x - enemy.dx + 1
+					b.y = enemy.y - enemy.dy / 2 - 1
+					b.spd = enemy.cur_weapon.init_spd
+
+					enemy_bullets_loaded = enemy_bullets_loaded+1
+					chaingun_cooldown = CHAINGUN_COOLDOWN_MS
+					break
+				}
+			}
+		}
+	}
+			
+	chaingun_cooldown = chaingun_cooldown-(rl.GetFrameTime()*1000)
 }
 
 enemy_graphics :: proc() {
@@ -386,14 +408,14 @@ enemy_graphics :: proc() {
 		}
 	}	
 
-	qv.rectangle(qv.Point{enemy.x, enemy.y}, qv.Point{enemy.x+enemy.dx, enemy.y+enemy.dy}, .Dark_Red)
+	qv.rectangle(qv.Point{enemy.x, enemy.y}, qv.Point{enemy.x+enemy.dx, enemy.y+enemy.dy}, .Blue)
    
 	if enemy.status == .Exploding {
 		enemy.exp_counter = enemy.exp_counter - 1
 		if enemy.exp_counter <= 0 {
 			enemy.status = .Normal
 		}
-		qv.circle(qv.Point{enemy.x+enemy.dx/2, enemy.y+enemy.dy/2}, f32(enemy.exp_counter * 8), .Red)
+		qv.circle(qv.Point{enemy.x+enemy.dx/2, enemy.y+enemy.dy/2}, f32(enemy.exp_counter * 8), .Blue)
 	}
 }
 
@@ -418,7 +440,12 @@ init :: proc() {
 	enemy.dx = 24
 	enemy.dy = 24
 	enemy.status = .Normal
-	enemy.cur_weapon = weapons[rand.choice_enum(Weapon_Type)]
+	load_weapons(.Enemy)
+
+	enemy.cur_weapon = weapons[.Chain_Gun]
+	// TODO: Re-enable random after weapons testing
+	//enemy.cur_weapon = weapons[rand.choice_enum(Weapon_Type)]
+	load_weapons(.Enemy)
 }
 
 load_settings :: proc() {
@@ -439,7 +466,7 @@ load_settings :: proc() {
 	}
 
 	qv.clear_screen(.Black)
-	qv.set_typing_speed(system_typing_speed)
+	qv.set_typing_speed(DEFAULT_TYPING_SPEED_CPS)
 	qv.type("A R S E N A L", qv.Text_Point{2, 2}, .Dark_Green)
 	qv.type("Terran craft",  qv.Text_Point{2, 4}, .Red)
 	qv.type(fmt.tprintf("HP:    %i", player.hp),  qv.Text_Point{2, 5}, .Green)
@@ -514,14 +541,14 @@ load_weapons :: proc(which: Owner) {
 		}
 		homer.power = player.cur_weapon.player_level + 2
 		homer.accel = f32(player.cur_weapon.player_level)  * ACCEL_FACTOR
-		homer.vert_spd = 1 + f32(player.cur_weapon.player_level)  * ACCEL_FACTOR
+		homer.vert_spd = 1 + f32(player.cur_weapon.player_level) / 10
 	} else {
 		if enemy.cur_weapon.type == .Homer {
 			homer.enemy_level = enemy.cur_weapon.enemy_level
 		}
 		homer.power = enemy.cur_weapon.enemy_level + 2
 		homer.accel = f32(enemy.cur_weapon.enemy_level) * ACCEL_FACTOR
-		homer.vert_spd = 1 + f32(enemy.cur_weapon.enemy_level) * ACCEL_FACTOR
+		homer.vert_spd = 1 + f32(enemy.cur_weapon.enemy_level) / 10
 	}
    	weapons[.Homer] = homer
 
@@ -694,8 +721,8 @@ player_bullets_update :: proc() {
 }
 
 player_control :: proc() {
+	@(static)chaingun_cooldown: f32
 	max_bullets_loaded: int
-	@(static)gun_switch: bool
 
 	for pk := rl.GetKeyPressed(); pk != .KEY_NULL; pk = rl.GetKeyPressed() {
 		#partial switch pk {
@@ -786,21 +813,24 @@ player_control :: proc() {
 		}
 	}
 
-	if !gun_switch && player.cur_weapon.type == .Chain_Gun {
+	if chaingun_cooldown <= 0 && player.cur_weapon.type == .Chain_Gun {
 		if player_bullets_loaded < len(player_bullets) {
-			player_bullets_loaded = player_bullets_loaded+1
 			for &b in player_bullets {
 				if b.status == .Dead {
 					b.status = .Normal
 					b.x = player.x + player.dx + 1
 					b.y = player.y + player.dy / 2 - 1
 					b.spd = player.cur_weapon.init_spd
+
+					player_bullets_loaded = player_bullets_loaded+1
+					chaingun_cooldown = CHAINGUN_COOLDOWN_MS
+					break
 				}
 			}
 		}
 	}
 			
-	gun_switch = !gun_switch
+	chaingun_cooldown = chaingun_cooldown-(rl.GetFrameTime()*1000)
 }
 
 player_graphics :: proc() {
