@@ -241,12 +241,16 @@ destruction :: proc() {
 			qv.circle(qv.Point{enemy.x+enemy.dx/2, enemy.y+enemy.dy/2}, ship_death_radius,   .Blue)
 			qv.circle(qv.Point{enemy.x+enemy.dx/2, enemy.y+enemy.dy/2}, ship_death_radius-6, .Black)
 		}
+		for &b in enemy_bullets { b.status = .Dead }
+		enemy_bullets_loaded = 0
 	} else {
 		if ship_death_radius < 300 {
 			ship_death_radius = ship_death_radius + (SHIP_EXP_RATE * rl.GetFrameTime())
 			qv.circle(qv.Point{player.x+player.dx/2, player.y+player.dy/2}, ship_death_radius,   .Red)
 			qv.circle(qv.Point{player.x+player.dx/2, player.y+player.dy/2}, ship_death_radius-6, .Black)
 		}
+		for &b in player_bullets { b.status = .Dead }
+		player_bullets_loaded = 0
 		winner_color = .Blue
 		winner_label = "Computer"	
 	}
@@ -263,7 +267,7 @@ display_stats :: proc() {
 	qv.print(fmt.tprintf("HP: %i/%i", enemy.hp, enemy.hp_max), qv.Text_Point{95, 1}, .Blue)
 }
 
-do_game :: proc() {
+do_battle :: proc() {
 	check_collisions()
 
 	should_exit := player_control()
@@ -282,6 +286,77 @@ do_game :: proc() {
 	
 	if player.hp <= 0 || enemy.hp <= 0 {
 		destruction()
+	}
+}
+
+do_configure_ship :: proc() {
+	@(static) chosen_weapon_type: Weapon_Type
+	if !weapon_chosen {
+		for kp := rl.GetKeyPressed(); kp != .KEY_NULL; kp=rl.GetKeyPressed() {
+			#partial switch kp {
+			case .UP:
+				new_weapon_idx := int(chosen_weapon_type)-1 if chosen_weapon_type != .Missile else int(Weapon_Type.Splitter)
+				chosen_weapon_type = Weapon_Type(new_weapon_idx)
+			case .DOWN:
+				new_weapon_idx := int(chosen_weapon_type)+1 if chosen_weapon_type != .Splitter else int(Weapon_Type.Missile)
+				chosen_weapon_type = Weapon_Type(new_weapon_idx)
+			case .ENTER:
+				weapon_chosen = true
+			}
+		}
+	}
+
+	qv.clear_screen(.Black)
+	qv.set_typing_speed(DEFAULT_TYPING_SPEED_CPS)
+	qv.type("A R S E N A L", qv.Text_Point{2, 2}, .Dark_Green)
+	qv.type("Terran craft",  qv.Text_Point{2, 4}, .Red)
+	qv.type(fmt.tprintf("HP:    %i", player.hp),  qv.Text_Point{2, 5}, .Green)
+	qv.type(fmt.tprintf("Speed: %v", player.spd), qv.Text_Point{2, 6}, .Green)
+   
+	qv.type("Kulari craft",  qv.Text_Point{40, 4}, .Blue)
+	qv.type(fmt.tprintf("HP:     %i", enemy.hp),  qv.Text_Point{40, 5}, .Dark_Green)
+	qv.type(fmt.tprintf("Speed:  %v", enemy.spd), qv.Text_Point{40, 6}, .Dark_Green)
+	qv.type("Weapon: ", qv.Text_Point{40, 7}, .Dark_Green)
+	qv.type(enemy.cur_weapon.handle, qv.Text_Point{48, 7}, enemy.cur_weapon.color)
+ 
+	qv.type("Make a weapon selection ([ENTER] to confirm):", qv.Text_Point{2, 9}, .Dark_Green)
+	for wt in Weapon_Type {
+		if chosen_weapon_type == wt {
+			qv.print("- ", qv.Text_Point{2, 10+int(wt)}, weapons[wt].color)
+		}
+		qv.print(weapons[wt].handle, qv.Text_Point{4, 10+int(wt)}, weapons[wt].color)
+	}
+
+	if weapon_chosen && !ships_configured {
+		enemy_bullets_loaded = 0
+		enemy.direction = .Down if rand.float32() > 0.5 else .Up
+		enemy.hp = enemy.hp_max
+		enemy.x = f32(sw - 40)
+		enemy.y = f32(sh / 2)
+		enemy.status = .Normal
+		load_weapons(.Enemy)
+		enemy.cur_weapon = weapons[enemy.cur_weapon.type]
+		load_weapons(.Enemy)
+
+		player_bullets_loaded = 0
+		player.hp = player.hp_max
+		player.x = 30
+		player.y = f32(sh / 2)
+		player.status = .Normal
+		player.cur_weapon = weapons[chosen_weapon_type]
+		load_weapons(.Player)
+		player.cur_weapon = weapons[chosen_weapon_type]
+
+		ships_configured = true
+	}
+
+	if ships_configured {
+		qv.type(player.cur_weapon.handle, qv.Text_Point{2, 24}, player.cur_weapon.color)
+		qv.type(" selected. Hit [ENTER] to enage Kulari craft", qv.Text_Point{2+len(player.cur_weapon.handle), 24}, .White)
+		if (qv.ready_to_continue(wait_for_keypress = true)) {
+			cur_screen = .Battle
+			qv.reset_frame_memory()
+		}
 	}
 }
 
@@ -355,11 +430,11 @@ do_loop :: proc() {
 			}
 			do_intro()
 		case .Configure_Ship:
-			load_settings()
+			do_configure_ship()
 		case .Battle:
-			do_game()
+			do_battle()
 		case .Victory:
-			victory()
+			do_victory()
 		}
 	}
 	qv.close()
@@ -385,6 +460,73 @@ do_title :: proc() {
 	if (qv.ready_to_continue(wait_for_keypress = true)) {
 		init()
 		cur_screen = .Intro
+		qv.reset_frame_memory()
+	}
+}
+
+do_victory :: proc() {
+	Upgrade_Choice :: enum {
+		Not_Selected = 0,
+		Level,
+		HP,
+		Speed,
+	}
+	@(static) current_upgrade: int = 1
+	chosen_upgrade: Upgrade_Choice
+
+	for pk := rl.GetKeyPressed(); pk != .KEY_NULL; pk=rl.GetKeyPressed() {
+		#partial switch pk {
+		case .UP:
+			current_upgrade = current_upgrade-1 if current_upgrade > 1 else 3
+		case .DOWN:
+			current_upgrade = current_upgrade+1 if current_upgrade < 3 else 1
+		case .ENTER:
+			chosen_upgrade = Upgrade_Choice(current_upgrade)
+		}
+	}
+
+	qv.clear_screen(.Black)
+	qv.print("Select one of the following options:", qv.Text_Point{2, 2}, .Dark_Green)
+	qv.print(
+		fmt.tprintf("Upgrade %s to level %i", player.cur_weapon.handle, player.cur_weapon.player_level+1),
+		qv.Text_Point{4, 3},
+		.Dark_Green,
+	)
+	qv.print(
+		fmt.tprintf("Upgrade hull HP to %i", player.hp_max+20),
+		qv.Text_Point{4, 4},
+		.Dark_Green,
+	)
+	qv.print(
+		fmt.tprintf("Upgrade speed to %v", player.spd+20),
+		qv.Text_Point{4, 5},
+		.Dark_Green,
+	)
+	qv.print("-", qv.Text_Point{2, 2+current_upgrade}, .Dark_Green)
+ 
+	if chosen_upgrade != .Not_Selected {
+		#partial switch chosen_upgrade {
+		case .Level:
+			player.cur_weapon.player_level = player.cur_weapon.player_level+1
+		case .HP:
+			player.hp_max = player.hp_max+20
+		case .Speed:
+			player.spd = player.spd+20
+		}
+		enemy.hp_max = enemy.hp_max+10
+		enemy.spd = enemy.spd+5
+		enemy.cur_weapon.enemy_level = enemy.cur_weapon.enemy_level+2
+
+		enemy.hp  = enemy.hp_max
+		player.hp = player.hp_max
+		load_weapons(.Enemy)
+		load_weapons(.Player)
+		for &b in enemy_bullets  { b.status = .Dead }
+		for &b in player_bullets { b.status = .Dead }
+		enemy_bullets_loaded  = 0
+		player_bullets_loaded = 0
+
+		cur_screen = .Battle
 		qv.reset_frame_memory()
 	}
 }
@@ -432,9 +574,13 @@ enemy_bullets_update :: proc() {
 }
 
 enemy_control :: proc() {
+	if enemy.hp <= 0 {
+		return
+	}
+
 	@(static)chaingun_cooldown: f32
 	max_bullets_loaded: int
-  
+
 	if int(rand.float32() * 20) + 1 == 1 {
 		enemy.direction = .Up if enemy.direction == .Down else .Down
 	}
@@ -576,11 +722,8 @@ init :: proc() {
 		  
 	player.x = 30
 	player.y = f32(sh / 2)
-	player.hp = 1
-	player.hp_max = 1
-	// TODO: Restore after testing destruction/victory
-	// player.hp = 50
-	// player.hp_max = 50
+	player.hp = 50
+	player.hp_max = 50
 	player.spd = 180
 	player.dx = 24
 	player.dy = 24
@@ -588,84 +731,16 @@ init :: proc() {
  
 	enemy.x = f32(sw - 40)
 	enemy.y = f32(sh / 2)
-	enemy.hp = 100
-	enemy.hp_max = 100
+	enemy.hp = 1
+	enemy.hp_max = 1
+	// TODO: Restore after testing victory
+	// enemy.hp = 100
+	// enemy.hp_max = 100
 	enemy.spd = 180
 	enemy.dx = 24
 	enemy.dy = 24
 	enemy.status = .Normal
 	enemy.cur_weapon = weapons[rand.choice_enum(Weapon_Type)]
-}
-
-load_settings :: proc() {
-	@(static) chosen_weapon_type: Weapon_Type
-	if !weapon_chosen {
-		for kp := rl.GetKeyPressed(); kp != .KEY_NULL; kp=rl.GetKeyPressed() {
-			#partial switch kp {
-			case .UP:
-				new_weapon_idx := int(chosen_weapon_type)-1 if chosen_weapon_type != .Missile else int(Weapon_Type.Splitter)
-				chosen_weapon_type = Weapon_Type(new_weapon_idx)
-			case .DOWN:
-				new_weapon_idx := int(chosen_weapon_type)+1 if chosen_weapon_type != .Splitter else int(Weapon_Type.Missile)
-				chosen_weapon_type = Weapon_Type(new_weapon_idx)
-			case .ENTER:
-				weapon_chosen = true
-			}
-		}
-	}
-
-	qv.clear_screen(.Black)
-	qv.set_typing_speed(DEFAULT_TYPING_SPEED_CPS)
-	qv.type("A R S E N A L", qv.Text_Point{2, 2}, .Dark_Green)
-	qv.type("Terran craft",  qv.Text_Point{2, 4}, .Red)
-	qv.type(fmt.tprintf("HP:    %i", player.hp),  qv.Text_Point{2, 5}, .Green)
-	qv.type(fmt.tprintf("Speed: %v", player.spd), qv.Text_Point{2, 6}, .Green)
-   
-	qv.type("Kulari craft",  qv.Text_Point{40, 4}, .Blue)
-	qv.type(fmt.tprintf("HP:     %i", enemy.hp),  qv.Text_Point{40, 5}, .Dark_Green)
-	qv.type(fmt.tprintf("Speed:  %v", enemy.spd), qv.Text_Point{40, 6}, .Dark_Green)
-	qv.type("Weapon: ", qv.Text_Point{40, 7}, .Dark_Green)
-	qv.type(enemy.cur_weapon.handle, qv.Text_Point{48, 7}, enemy.cur_weapon.color)
- 
-	qv.type("Make a weapon selection ([ENTER] to confirm):", qv.Text_Point{2, 9}, .Dark_Green)
-	for wt in Weapon_Type {
-		if chosen_weapon_type == wt {
-			qv.print("- ", qv.Text_Point{2, 10+int(wt)}, weapons[wt].color)
-		}
-		qv.print(weapons[wt].handle, qv.Text_Point{4, 10+int(wt)}, weapons[wt].color)
-	}
-
-	if weapon_chosen && !ships_configured {
-		enemy_bullets_loaded = 0
-		enemy.direction = .Down if rand.float32() > 0.5 else .Up
-		enemy.hp = enemy.hp_max
-		enemy.x = f32(sw - 40)
-		enemy.y = f32(sh / 2)
-		enemy.status = .Normal
-		load_weapons(.Enemy)
-		enemy.cur_weapon = weapons[enemy.cur_weapon.type]
-		load_weapons(.Enemy)
-
-		player_bullets_loaded = 0
-		player.hp = player.hp_max
-		player.x = 30
-		player.y = f32(sh / 2)
-		player.status = .Normal
-		player.cur_weapon = weapons[chosen_weapon_type]
-		load_weapons(.Player)
-		player.cur_weapon = weapons[chosen_weapon_type]
-
-		ships_configured = true
-	}
-
-	if ships_configured {
-		qv.type(player.cur_weapon.handle, qv.Text_Point{2, 24}, player.cur_weapon.color)
-		qv.type(" selected. Hit [ENTER] to enage Kulari craft", qv.Text_Point{2+len(player.cur_weapon.handle), 24}, .White)
-		if (qv.ready_to_continue(wait_for_keypress = true)) {
-			cur_screen = .Battle
-			qv.reset_frame_memory()
-		}
-	}
 }
 
 load_weapons :: proc(which: Owner) {
@@ -900,7 +975,7 @@ player_control :: proc() -> bool {
 				return true
 			}
 		case .F:
-			if player.cur_weapon.type == .Chain_Gun {
+			if player.cur_weapon.type == .Chain_Gun || enemy.hp <= 0 {
 				continue
 			}
 			cur_type := player.cur_weapon.type
@@ -1028,10 +1103,6 @@ player_graphics :: proc() {
 		}
 		qv.circle(qv.Point{player.x+player.dx/2, player.y+player.dy/2}, f32(player.exp_counter * 5), .Red)
 	}
-}
-
-victory :: proc() {
-	qv.clear_screen(.Black)
 }
 
 main :: proc() {
