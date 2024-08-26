@@ -241,15 +241,158 @@ do_title :: proc() {
 }
 
 enemy_bullets_update :: proc() {
+	for &b in enemy_bullets {
+		#partial switch b.status {
+		case .Normal:
+			b.spd = b.spd + enemy.cur_weapon.accel
+			if b.x < 0 {
+				b.status = .Dead
+				enemy_bullets_loaded = enemy_bullets_loaded-1
+			} else {
+				b.prev_x = b.x
+				b.prev_y = b.y
+				b.x = b.x - b.spd * rl.GetFrameTime()
+				#partial switch enemy.cur_weapon.type {
+				case .Homer:
+					if b.y > player.y { b.direction = .Up }
+					if b.y < player.y { b.direction = .Down }
+					if b.direction == .Down { b.y = b.y + enemy.cur_weapon.vert_spd }
+					if b.direction == .Up   { b.y = b.y - enemy.cur_weapon.vert_spd }
+				case .Wave:
+					b.y = f32(b.yi) - 20*math.sin_f32(b.x-f32(b.xi) / 50)
+				case .Splitter:
+					if b.x < x_left_threshold {
+						if b.direction == .Down { b.y = b.y + enemy.cur_weapon.vert_spd }
+						if b.direction == .Up   { b.y = b.y - enemy.cur_weapon.vert_spd }
+					}
+				}
+				qv.rectangle(qv.Point{b.x, b.y}, qv.Point{b.x+enemy.cur_weapon.dx, b.y+enemy.cur_weapon.dy}, enemy.cur_weapon.color)
+			}
+		case .Exploding:
+			b.exp_counter = b.exp_counter-1
+			if b.exp_counter > 0 {
+				b.x = b.x-b.spd*rl.GetFrameTime()
+				qv.circle(qv.Point{b.x+enemy.cur_weapon.dx/2, b.y+enemy.cur_weapon.dy/2}, f32(b.exp_counter*4), enemy.cur_weapon.color)
+			} else {
+				b.status = .Dead
+				enemy_bullets_loaded = enemy_bullets_loaded-1
+			}
+		}
+	}
 
 }
 
 enemy_control :: proc() {
-
+	max_bullets_loaded: int
+  
+	if int(rand.float32() * 20) + 1 == 1 {
+		enemy.direction = .Up if enemy.direction == .Down else .Down
+	}
+	if int(rand.float32() * f32(enemy.cur_weapon.ai_fire_rate)) + 1 == 1 {
+		cur_type := enemy.cur_weapon.type
+		if cur_type == .Splitter || cur_type == .Barrier || cur_type == .Nuke || cur_type == .Knife {
+			max_bullets_loaded = enemy.cur_weapon.max_bullets_loaded
+		} else {
+			max_bullets_loaded = len(enemy_bullets)
+		}
+		
+		#partial switch cur_type {
+		case .Twin:
+			if enemy_bullets_loaded < max_bullets_loaded {
+				enemy_bullets_loaded = enemy_bullets_loaded+1
+				for &b in enemy_bullets {
+					if b.status == .Dead {
+						b.status = .Normal
+						b.x = enemy.x - enemy.dx
+						b.y = enemy.y - enemy.dy*2
+						b.spd = enemy.cur_weapon.init_spd
+						break
+					}
+				}
+			}
+			if enemy_bullets_loaded < max_bullets_loaded {
+				enemy_bullets_loaded = enemy_bullets_loaded+1
+				for &b in enemy_bullets {
+					if b.status == .Dead {
+						b.status = .Normal
+						b.x = enemy.x - enemy.dx
+						b.y = enemy.y + enemy.dy*2
+						b.spd = enemy.cur_weapon.init_spd
+						break
+					}
+				}
+			}
+		case .Splitter:
+			if enemy_bullets_loaded < max_bullets_loaded {
+				for i in 1..=3 {
+					if enemy_bullets_loaded < max_bullets_loaded {
+						enemy_bullets_loaded = enemy_bullets_loaded+1
+						for &b in enemy_bullets {
+							b.status = .Normal
+							b.x   = enemy.x+enemy.dx+1
+							b.y   = enemy.y+(enemy.dy/2) - 1 - (enemy.cur_weapon.dy / 2)
+							b.yi  = int(b.y)
+							b.xi  = int(b.x)
+							b.spd = enemy.cur_weapon.init_spd
+							if i == 1 { b.direction = .Right }
+							if i == 2 { b.direction = .Up }
+							if i == 3 { b.direction = .Down }
+							break
+						}
+					}
+				}
+			}
+		case:
+			if enemy_bullets_loaded < max_bullets_loaded {
+				enemy_bullets_loaded = enemy_bullets_loaded+1
+				for &b in enemy_bullets {
+					if b.status == .Dead {
+						b.status = .Normal
+						b.x = enemy.x+enemy.dx+1
+						b.y = enemy.y+(enemy.dy/2) - 1 - (enemy.cur_weapon.dy / 2)
+						b.yi = int(b.y)
+						b.xi = int(b.x)
+						b.spd = enemy.cur_weapon.init_spd
+						if enemy.cur_weapon.type == .Nuke || enemy.cur_weapon.type == .Barrier {
+							b.hp = enemy.cur_weapon.hp_max
+						}
+						break
+					}
+				}
+			}
+		}
+	}
 }
 
 enemy_graphics :: proc() {
+	#partial switch enemy.direction {
+	case .Up: 
+		new_y := enemy.y-enemy.spd*rl.GetFrameTime()
+		if new_y < 20 {
+			enemy.y = 20
+			enemy.direction = .Down
+		} else {
+			enemy.y = new_y
+		}
+	case .Down:
+		new_y := enemy.y+enemy.spd*rl.GetFrameTime()
+		if new_y > f32(sh)-enemy.dy {
+			enemy.y = f32(sh)-enemy.dy
+			enemy.direction = .Up
+		} else {
+			enemy.y = new_y
+		}
+	}	
 
+	qv.rectangle(qv.Point{enemy.x, enemy.y}, qv.Point{enemy.x+enemy.dx, enemy.y+enemy.dy}, .Dark_Red)
+   
+	if enemy.status == .Exploding {
+		enemy.exp_counter = enemy.exp_counter - 1
+		if enemy.exp_counter <= 0 {
+			enemy.status = .Normal
+		}
+		qv.circle(qv.Point{enemy.x+enemy.dx/2, enemy.y+enemy.dy/2}, f32(enemy.exp_counter * 8), .Red)
+	}
 }
 
 init :: proc() {
@@ -567,7 +710,6 @@ player_control :: proc() {
 				continue
 			}
 			cur_type := player.cur_weapon.type
-			//if cur_type in {.Splitter, .Barrier, .Nuke, .Knife} {
 			if cur_type == .Splitter || cur_type == .Barrier || cur_type == .Nuke || cur_type == .Knife {
 				max_bullets_loaded = player.cur_weapon.max_bullets_loaded
 			} else {
@@ -672,7 +814,7 @@ player_graphics :: proc() {
 		player.x = new_x if new_x < f32(sw)/4-player.dx else f32(sw)/4-player.dx
 	case .Down:
 		new_y := player.y+player.spd*rl.GetFrameTime()
-		player.y = new_y if new_y < f32(sh)-player.dx else f32(sh)-player.dx
+		player.y = new_y if new_y < f32(sh)-player.dy else f32(sh)-player.dy
 	}	
 
 	qv.rectangle(qv.Point{player.x, player.y}, qv.Point{player.x+player.dx, player.y+player.dy}, .Dark_Red)
