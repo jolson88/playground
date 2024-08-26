@@ -266,7 +266,10 @@ display_stats :: proc() {
 do_game :: proc() {
 	check_collisions()
 
-	player_control()
+	should_exit := player_control()
+	if should_exit {
+		return
+	}
 	enemy_control()
 
 	qv.clear_screen(.Black)
@@ -566,6 +569,8 @@ enemy_graphics :: proc() {
 }
 
 init :: proc() {
+	ships_configured = false
+	weapon_chosen = false
 	player.cur_weapon.player_level = 1
 	enemy.cur_weapon.enemy_level = 1
 		  
@@ -867,7 +872,7 @@ player_bullets_update :: proc() {
 	}
 }
 
-player_control :: proc() {
+player_control :: proc() -> bool {
 	@(static)chaingun_cooldown: f32
 	max_bullets_loaded: int
 
@@ -884,8 +889,15 @@ player_control :: proc() {
 		case .ENTER:
 			if player.hp <= 0 || enemy.hp <= 0 {
 				ship_death_radius = 0
-				cur_screen = .Victory
 				qv.reset_frame_memory()
+
+				if player.hp > 0 {
+					cur_screen = .Victory
+				} else {
+					init()
+					cur_screen = .Configure_Ship
+				}
+				return true
 			}
 		case .F:
 			if player.cur_weapon.type == .Chain_Gun {
@@ -986,6 +998,7 @@ player_control :: proc() {
 	}
 			
 	chaingun_cooldown = chaingun_cooldown-(rl.GetFrameTime()*1000)
+	return false
 }
 
 player_graphics :: proc() {
