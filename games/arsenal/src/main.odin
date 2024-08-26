@@ -111,6 +111,14 @@ destruction :: proc() {
 
 }
 
+display_stats :: proc() {
+	qv.print(fmt.tprintf("HP: %i/%i", player.hp, player.hp_max), qv.Text_Point{2, 1}, .Red)
+	qv.print(fmt.tprintf("[%s-%i]", player.cur_weapon.handle, player.cur_weapon.player_level), qv.Text_Point{21, 1}, .Red)
+ 
+	qv.print(fmt.tprintf("[%s-%i]", enemy.cur_weapon.handle, enemy.cur_weapon.player_level), qv.Text_Point{75, 1}, .Blue)
+	qv.print(fmt.tprintf("HP: %i/%i", enemy.hp, enemy.hp_max), qv.Text_Point{95, 1}, .Blue)
+}
+
 do_game :: proc() {
 	check_collisions()
 
@@ -118,11 +126,12 @@ do_game :: proc() {
 	enemy_control()
 
 	qv.clear_screen(.Black)
+	display_stats()
 	player_graphics()
 	enemy_graphics()
 
-	process_player_bullets()
-	process_enemy_bullets()
+	player_bullets_update()
+	enemy_bullets_update()
 }
 
 do_intro :: proc() {
@@ -229,6 +238,10 @@ do_title :: proc() {
 		cur_screen = .Intro
 		qv.reset_frame_memory()
 	}
+}
+
+enemy_bullets_update :: proc() {
+
 }
 
 enemy_control :: proc() {
@@ -494,6 +507,47 @@ load_weapons :: proc(which: Owner) {
 	weapons[.Splitter] = splitter
 }
 
+player_bullets_update :: proc() {
+	for &b in player_bullets {
+		#partial switch b.status {
+		case .Normal:
+			b.spd = b.spd + player.cur_weapon.accel
+			if b.x+player.cur_weapon.dx > f32(sw) {
+				b.status = .Dead
+				player_bullets_loaded = player_bullets_loaded-1
+			} else {
+				b.prev_x = b.x
+				b.prev_y = b.y
+				b.x = b.x + b.spd * rl.GetFrameTime()
+				#partial switch player.cur_weapon.type {
+				case .Homer:
+					if b.y > enemy.y { b.direction = .Up }
+					if b.y < enemy.y { b.direction = .Down }
+					if b.direction == .Down { b.y = b.y + player.cur_weapon.vert_spd }
+					if b.direction == .Up   { b.y = b.y - player.cur_weapon.vert_spd }
+				case .Wave:
+					b.y = f32(b.yi) - 20*math.sin_f32(b.x-f32(b.xi) / 50)
+				case .Splitter:
+					if b.x > x_right_threshold {
+						if b.direction == .Down { b.y = b.y + player.cur_weapon.vert_spd }
+						if b.direction == .Up   { b.y = b.y - player.cur_weapon.vert_spd }
+					}
+				}
+				qv.rectangle(qv.Point{b.x, b.y}, qv.Point{b.x+player.cur_weapon.dx, b.y+player.cur_weapon.dy}, player.cur_weapon.color)
+			}
+		case .Exploding:
+			b.exp_counter = b.exp_counter-1
+			if b.exp_counter > 0 {
+				b.x = b.x-b.spd*rl.GetFrameTime()
+				qv.circle(qv.Point{b.x+player.cur_weapon.dx/2, b.y+player.cur_weapon.dy/2}, f32(b.exp_counter*4), player.cur_weapon.color)
+			} else {
+				b.status = .Dead
+				player_bullets_loaded = player_bullets_loaded-1
+			}
+		}
+	}
+}
+
 player_control :: proc() {
 	max_bullets_loaded: int
 	@(static)gun_switch: bool
@@ -629,51 +683,6 @@ player_graphics :: proc() {
 			player.status = .Normal
 		}
 		qv.circle(qv.Point{player.x+player.dx/2, player.y+player.dy/2}, f32(player.exp_counter * 8), .Red)
-	}
-}
-
-process_enemy_bullets :: proc() {
-
-}
-
-process_player_bullets :: proc() {
-	for &b in player_bullets {
-		#partial switch b.status {
-		case .Normal:
-			b.spd = b.spd + player.cur_weapon.accel
-			if b.x+player.cur_weapon.dx > f32(sw) {
-				b.status = .Dead
-				player_bullets_loaded = player_bullets_loaded-1
-			} else {
-				b.prev_x = b.x
-				b.prev_y = b.y
-				b.x = b.x + b.spd * rl.GetFrameTime()
-				#partial switch player.cur_weapon.type {
-				case .Homer:
-					if b.y > enemy.y { b.direction = .Up }
-					if b.y < enemy.y { b.direction = .Down }
-					if b.direction == .Down { b.y = b.y + player.cur_weapon.vert_spd }
-					if b.direction == .Up   { b.y = b.y - player.cur_weapon.vert_spd }
-				case .Wave:
-					b.y = f32(b.yi) - 20*math.sin_f32(b.x-f32(b.xi) / 50)
-				case .Splitter:
-					if b.x > x_right_threshold {
-						if b.direction == .Down { b.y = b.y + player.cur_weapon.vert_spd }
-						if b.direction == .Up   { b.y = b.y - player.cur_weapon.vert_spd }
-					}
-				}
-				qv.rectangle(qv.Point{b.x, b.y}, qv.Point{b.x+player.cur_weapon.dx, b.y+player.cur_weapon.dy}, player.cur_weapon.color)
-			}
-		case .Exploding:
-			b.exp_counter = b.exp_counter-1
-			if b.exp_counter > 0 {
-				b.x = b.x-b.spd*rl.GetFrameTime()
-				qv.circle(qv.Point{b.x+player.cur_weapon.dx/2, b.y+player.cur_weapon.dy/2}, f32(b.exp_counter*4), player.cur_weapon.color)
-			} else {
-				b.status = .Dead
-				player_bullets_loaded = player_bullets_loaded-1
-			}
-		}
 	}
 }
 
