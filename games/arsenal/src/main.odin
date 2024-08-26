@@ -93,15 +93,15 @@ x_right_threshold, x_left_threshold: f32
 ships_configured := false
 weapon_chosen    := false
 weapons := map[Weapon_Type]Weapon{
-	.Missile   = Weapon{ type=.Missile,   handle="Missile",   dx=20, dy=4,  init_spd=0.4, ai_fire_rate=4,  color=.Yellow,     player_level=1, enemy_level=1},
-	.Homer     = Weapon{ type=.Homer,     handle="Homer",     dx=6,  dy=6,  init_spd=0.4, ai_fire_rate=4,  color=.Cyan,       player_level=1, enemy_level=1},
-	.Nuke      = Weapon{ type=.Nuke,      handle="Nuke",      dx=40, dy=8,  init_spd=4,   ai_fire_rate=10, color=.Red, 		  player_level=1, enemy_level=1},
-	.Knife     = Weapon{ type=.Knife,     handle="Knife",     dx=15, dy=2,  init_spd=20,  ai_fire_rate=6,  color=.Gray,       player_level=1, enemy_level=1},
-	.Chain_Gun = Weapon{ type=.Chain_Gun, handle="Chain Gun", dx=20, dy=2,  init_spd=8,   ai_fire_rate=2,  color=.White,      player_level=1, enemy_level=1},
-	.Twin 	   = Weapon{ type=.Twin, 	  handle="Twin", 	  dx=25, dy=2,  init_spd=4,   ai_fire_rate=4,  color=.Green,      player_level=1, enemy_level=1},
-	.Wave      = Weapon{ type=.Wave,      handle="Wave",      dx=10, dy=4,  init_spd=14,  ai_fire_rate=10, color=.Magenta,	  player_level=1, enemy_level=1},
-	.Barrier   = Weapon{ type=.Barrier,   handle="Barrier",   dx=4,  dy=80, init_spd=4,   ai_fire_rate=8,  color=.Blue, 	  player_level=1, enemy_level=1, accel=0.1},
-	.Splitter  = Weapon{ type=.Splitter,  handle="Splitter",  dx=20, dy=4,  init_spd=15,  ai_fire_rate=4,  color=.Green,      player_level=1, enemy_level=1, vert_spd=6, max_bullets_loaded=18},
+	.Missile   = Weapon{ type=.Missile,   handle="Missile",   dx=20, dy=4,  init_spd=0.4, ai_fire_rate=4,  color=.Yellow,  player_level=1, enemy_level=1},
+	.Homer     = Weapon{ type=.Homer,     handle="Homer",     dx=6,  dy=6,  init_spd=0.4, ai_fire_rate=4,  color=.Cyan,    player_level=1, enemy_level=1},
+	.Nuke      = Weapon{ type=.Nuke,      handle="Nuke",      dx=40, dy=8,  init_spd=4,   ai_fire_rate=10, color=.Brown,   player_level=1, enemy_level=1},
+	.Knife     = Weapon{ type=.Knife,     handle="Knife",     dx=15, dy=2,  init_spd=20,  ai_fire_rate=6,  color=.Gray,    player_level=1, enemy_level=1},
+	.Chain_Gun = Weapon{ type=.Chain_Gun, handle="Chain Gun", dx=20, dy=2,  init_spd=8,   ai_fire_rate=2,  color=.White,   player_level=1, enemy_level=1},
+	.Twin 	   = Weapon{ type=.Twin, 	  handle="Twin", 	  dx=25, dy=2,  init_spd=4,   ai_fire_rate=4,  color=.Green,   player_level=1, enemy_level=1},
+	.Wave      = Weapon{ type=.Wave,      handle="Wave",      dx=10, dy=4,  init_spd=14,  ai_fire_rate=10, color=.Magenta, player_level=1, enemy_level=1},
+	.Barrier   = Weapon{ type=.Barrier,   handle="Barrier",   dx=4,  dy=80, init_spd=4,   ai_fire_rate=8,  color=.Blue,    player_level=1, enemy_level=1, accel=0.1},
+	.Splitter  = Weapon{ type=.Splitter,  handle="Splitter",  dx=20, dy=4,  init_spd=15,  ai_fire_rate=4,  color=.Green,   player_level=1, enemy_level=1, vert_spd=6, max_bullets_loaded=18},
 }
 
 // procedures
@@ -222,8 +222,8 @@ do_title :: proc() {
 	qv.clear_screen(.Black)
 	for i in 1..=60 {
 		phase := math.sin_f32(0.5*f32(i)+qv.get_elapsed_time()*3)
-		qv.sizeable_line(qv.Point{f32(i*sw/60), 1}, qv.Point{f32(sw), f32(i*sh/60)}, .Dark_Red, phase+1.2)
-		qv.sizeable_line(qv.Point{1, f32(i*sh/60)}, qv.Point{f32(i*sw/60), f32(sh)}, .Dark_Red, phase+2.0)
+		qv.sizeable_line(qv.Point{f32(i*sw/60), 1}, qv.Point{f32(sw), f32(i*sh/60)}, .Red, phase+1.2)
+		qv.sizeable_line(qv.Point{1, f32(i*sh/60)}, qv.Point{f32(i*sw/60), f32(sh)}, .Red, phase+2.0)
 	}
 
 	title := "r10u30r5f30 u30r20d20l20f10r15 r20u15l20u15r20br5 nr20d15nr20d15r25 u30r5f30r5u30br5 nd30r5f30br5 nu30r20"
@@ -442,7 +442,7 @@ init :: proc() {
 	enemy.status = .Normal
 	load_weapons(.Enemy)
 
-	enemy.cur_weapon = weapons[.Chain_Gun]
+	enemy.cur_weapon = weapons[.Knife]
 	// TODO: Re-enable random after weapons testing
 	//enemy.cur_weapon = weapons[rand.choice_enum(Weapon_Type)]
 	load_weapons(.Enemy)
@@ -849,7 +849,7 @@ player_graphics :: proc() {
 		player.y = new_y if new_y < f32(sh)-player.dy else f32(sh)-player.dy
 	}	
 
-	qv.rectangle(qv.Point{player.x, player.y}, qv.Point{player.x+player.dx, player.y+player.dy}, .Dark_Red)
+	qv.rectangle(qv.Point{player.x, player.y}, qv.Point{player.x+player.dx, player.y+player.dy}, .Red)
    
 	if player.status == .Exploding {
 		player.exp_counter = player.exp_counter - 1
