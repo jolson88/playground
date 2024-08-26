@@ -96,7 +96,7 @@ weapons := map[Weapon_Type]Weapon{
 	.Missile   = Weapon{ type=.Missile,   handle="Missile",   dx=20, dy=4,  init_spd=0.4, ai_fire_rate=4,  color=.Yellow,  player_level=1, enemy_level=1},
 	.Homer     = Weapon{ type=.Homer,     handle="Homer",     dx=6,  dy=6,  init_spd=0.4, ai_fire_rate=4,  color=.Cyan,    player_level=1, enemy_level=1},
 	.Nuke      = Weapon{ type=.Nuke,      handle="Nuke",      dx=40, dy=8,  init_spd=4,   ai_fire_rate=10, color=.Brown,   player_level=1, enemy_level=1},
-	.Knife     = Weapon{ type=.Knife,     handle="Knife",     dx=15, dy=2,  init_spd=20,  ai_fire_rate=6,  color=.Gray,    player_level=1, enemy_level=1},
+	.Knife     = Weapon{ type=.Knife,     handle="Knife",     dx=15, dy=4,  init_spd=800, ai_fire_rate=6,  color=.Gray,    player_level=1, enemy_level=1},
 	.Chain_Gun = Weapon{ type=.Chain_Gun, handle="Chain Gun", dx=20, dy=2,  init_spd=8,   ai_fire_rate=2,  color=.White,   player_level=1, enemy_level=1},
 	.Twin 	   = Weapon{ type=.Twin, 	  handle="Twin", 	  dx=25, dy=2,  init_spd=4,   ai_fire_rate=4,  color=.Green,   player_level=1, enemy_level=1},
 	.Wave      = Weapon{ type=.Wave,      handle="Wave",      dx=10, dy=4,  init_spd=14,  ai_fire_rate=10, color=.Magenta, player_level=1, enemy_level=1},
@@ -581,14 +581,14 @@ load_weapons :: proc(which: Owner) {
 			knife.player_level = player.cur_weapon.player_level
 		}
 		knife.power = player.cur_weapon.player_level + 1
-		knife.accel = f32(player.cur_weapon.player_level) * ACCEL_FACTOR * 0.5
+		knife.accel = f32(player.cur_weapon.player_level) * ACCEL_FACTOR
 		knife.max_bullets_loaded = player.cur_weapon.player_level + 3
 	} else {
 		if enemy.cur_weapon.type == .Knife {
 			knife.enemy_level = enemy.cur_weapon.enemy_level
 		}
 		knife.power = enemy.cur_weapon.enemy_level + 1
-		knife.accel = f32(enemy.cur_weapon.enemy_level) * ACCEL_FACTOR * 0.5
+		knife.accel = f32(enemy.cur_weapon.enemy_level) * ACCEL_FACTOR
 		knife.max_bullets_loaded = enemy.cur_weapon.enemy_level + 3
 	}
 	weapons[.Knife] = knife
