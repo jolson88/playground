@@ -306,7 +306,7 @@ enemy_control :: proc() {
 				for &b in enemy_bullets {
 					if b.status == .Dead {
 						b.status = .Normal
-						b.x = enemy.x + enemy.dx
+						b.x = enemy.x
 						b.y = enemy.y + enemy.dy*2
 						b.spd = enemy.cur_weapon.init_spd
 						break
@@ -318,7 +318,7 @@ enemy_control :: proc() {
 				for &b in enemy_bullets {
 					if b.status == .Dead {
 						b.status = .Normal
-						b.x = enemy.x + enemy.dx
+						b.x = enemy.x
 						b.y = enemy.y - enemy.dy*2
 						b.spd = enemy.cur_weapon.init_spd
 						break
@@ -442,7 +442,7 @@ init :: proc() {
 	enemy.status = .Normal
 	load_weapons(.Enemy)
 
-	enemy.cur_weapon = weapons[.Knife]
+	enemy.cur_weapon = weapons[.Twin]
 	// TODO: Re-enable random after weapons testing
 	//enemy.cur_weapon = weapons[rand.choice_enum(Weapon_Type)]
 	load_weapons(.Enemy)
@@ -752,7 +752,7 @@ player_control :: proc() {
 					for &b in player_bullets {
 						if b.status == .Dead {
 							b.status = .Normal
-							b.x = player.x - player.dx
+							b.x = player.x
 							b.y = player.y - player.dy*2
 							b.spd = player.cur_weapon.init_spd
 							break
@@ -764,7 +764,7 @@ player_control :: proc() {
 					for &b in player_bullets {
 						if b.status == .Dead {
 							b.status = .Normal
-							b.x = player.x - player.dx
+							b.x = player.x
 							b.y = player.y + player.dy*2
 							b.spd = player.cur_weapon.init_spd
 							break
