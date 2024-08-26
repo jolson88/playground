@@ -731,11 +731,8 @@ init :: proc() {
  
 	enemy.x = f32(sw - 40)
 	enemy.y = f32(sh / 2)
-	enemy.hp = 1
-	enemy.hp_max = 1
-	// TODO: Restore after testing victory
-	// enemy.hp = 100
-	// enemy.hp_max = 100
+	enemy.hp = 100
+	enemy.hp_max = 100
 	enemy.spd = 180
 	enemy.dx = 24
 	enemy.dy = 24
