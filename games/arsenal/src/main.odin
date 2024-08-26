@@ -86,12 +86,14 @@ Weapon_Type :: enum {
 CHAINGUN_COOLDOWN_MS     :: 50
 DEFAULT_TYPING_SPEED_CPS :: 200
 INTRO_DISABLED           :: true
+SHIP_EXP_RATE			 :: 200
 
 sh, sw: int
 cur_screen: Arsenal_Screen
 enemy, player: Entity
 enemy_bullets, player_bullets: [20]Entity
 enemy_bullets_loaded, player_bullets_loaded: int
+ship_death_radius: f32
 x_right_threshold, x_left_threshold: f32
 
 ships_configured := false
@@ -231,7 +233,26 @@ check_collisions :: proc() {
 }
 
 destruction :: proc() {
+	winner_color := qv.Default_Color.Red
+	winner_label := "Player"
+	if player.hp > enemy.hp {
+		if ship_death_radius < 300 {
+			ship_death_radius = ship_death_radius + (SHIP_EXP_RATE * rl.GetFrameTime())
+			qv.circle(qv.Point{enemy.x+enemy.dx/2, enemy.y+enemy.dy/2}, ship_death_radius,   .Blue)
+			qv.circle(qv.Point{enemy.x+enemy.dx/2, enemy.y+enemy.dy/2}, ship_death_radius-6, .Black)
+		}
+	} else {
+		if ship_death_radius < 300 {
+			ship_death_radius = ship_death_radius + (SHIP_EXP_RATE * rl.GetFrameTime())
+			qv.circle(qv.Point{player.x+player.dx/2, player.y+player.dy/2}, ship_death_radius,   .Red)
+			qv.circle(qv.Point{player.x+player.dx/2, player.y+player.dy/2}, ship_death_radius-6, .Black)
+		}
+		winner_color = .Blue
+		winner_label = "Computer"	
+	}
 
+	qv.print_centered(fmt.tprintf("%s Wins!", winner_label), 10, .Blue)
+	qv.print_centered("Hit [ENTER] to player again, [ESC] to exit", qv.get_text_rows() - 10, .White)
 }
 
 display_stats :: proc() {
@@ -531,7 +552,9 @@ enemy_graphics :: proc() {
 		}
 	}	
 
-	qv.rectangle(qv.Point{enemy.x, enemy.y}, qv.Point{enemy.x+enemy.dx, enemy.y+enemy.dy}, .Blue)
+	if enemy.hp > 0 {
+		qv.rectangle(qv.Point{enemy.x, enemy.y}, qv.Point{enemy.x+enemy.dx, enemy.y+enemy.dy}, .Blue)
+	}
    
 	if enemy.status == .Exploding {
 		enemy.exp_counter = enemy.exp_counter - 1
@@ -548,8 +571,11 @@ init :: proc() {
 		  
 	player.x = 30
 	player.y = f32(sh / 2)
-	player.hp = 50
-	player.hp_max = 50
+	player.hp = 1
+	player.hp_max = 1
+	// TODO: Restore after testing destruction/victory
+	// player.hp = 50
+	// player.hp_max = 50
 	player.spd = 180
 	player.dx = 24
 	player.dy = 24
@@ -855,6 +881,12 @@ player_control :: proc() {
 			player.direction = .Right
 		case .DOWN:
 			player.direction = .Down
+		case .ENTER:
+			if player.hp <= 0 || enemy.hp <= 0 {
+				ship_death_radius = 0
+				cur_screen = .Victory
+				qv.reset_frame_memory()
+			}
 		case .F:
 			if player.cur_weapon.type == .Chain_Gun {
 				continue
@@ -936,7 +968,7 @@ player_control :: proc() {
 		}
 	}
 
-	if chaingun_cooldown <= 0 && player.cur_weapon.type == .Chain_Gun {
+	if chaingun_cooldown <= 0 && player.cur_weapon.type == .Chain_Gun && player.hp > 0 {
 		if player_bullets_loaded < len(player_bullets) {
 			for &b in player_bullets {
 				if b.status == .Dead {
@@ -972,7 +1004,9 @@ player_graphics :: proc() {
 		player.y = new_y if new_y < f32(sh)-player.dy else f32(sh)-player.dy
 	}	
 
-	qv.rectangle(qv.Point{player.x, player.y}, qv.Point{player.x+player.dx, player.y+player.dy}, .Red)
+	if player.hp > 0 {
+		qv.rectangle(qv.Point{player.x, player.y}, qv.Point{player.x+player.dx, player.y+player.dy}, .Red)
+	}
    
 	if player.status == .Exploding {
 		player.exp_counter = player.exp_counter - 1
