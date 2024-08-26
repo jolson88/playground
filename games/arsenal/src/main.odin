@@ -13,10 +13,11 @@ Arsenal_Screen :: enum {
 	Intro,
 	Configure_Ship,
 	Battle,
+	Destruction,
+	Victory,
 }
 
 Direction :: enum {
-	None = 0,
 	Down,
 	Left,
 	Right,
@@ -24,9 +25,9 @@ Direction :: enum {
 }
 
 Entity :: struct {
-	x, y: int,
-	prev_x, prev_y: int,
-	dx, dy: int,
+	x, y: f32,
+	prev_x, prev_y: f32,
+	dx, dy: f32,
 	xi, yi: int,
 	hp: int,
 	hp_max: int,
@@ -40,7 +41,7 @@ Entity :: struct {
 
 Entity_Status :: enum {
 	Dead = 0,
-	Alive,
+	Normal,
 	Exploding,
 }
 
@@ -54,9 +55,9 @@ Weapon :: struct {
 	type: Weapon_Type,
 	handle: string,
 	power: int,
-	vert_spd: int,
+	vert_spd: f32,
 	enemy_level, player_level: int,
-	dx, dy: int,
+	dx, dy: f32,
 	accel: f32,
 	init_spd: f32,
 	hp_max: int,
@@ -83,101 +84,48 @@ cur_screen: Arsenal_Screen
 enemy, player: Entity
 enemy_bullets, player_bullets: [20]Entity
 enemy_bullets_loaded, player_bullets_loaded: int
+x_right_threshold, x_left_threshold: f32
 
-system_typing_speed := 28
+system_typing_speed := 56
 play_intro       := false
 ships_configured := false
 weapon_chosen    := false
 weapons := map[Weapon_Type]Weapon{
-	.Missile   = Weapon{ type=.Missile,   handle="Missile",   dx=20, dy=2,  init_spd=0.4, ai_fire_rate=4,  color=.Yellow,     player_level=1, enemy_level=1},
-	.Homer     = Weapon{ type=.Homer,     handle="Homer",     dx=5,  dy=2,  init_spd=0.4, ai_fire_rate=4,  color=.Cyan,       player_level=1, enemy_level=1},
-	.Nuke      = Weapon{ type=.Nuke,      handle="Nuke",      dx=40, dy=4,  init_spd=4,   ai_fire_rate=10, color=.Red, 		  player_level=1, enemy_level=1},
-	.Knife     = Weapon{ type=.Knife,     handle="Knife",     dx=15, dy=1,  init_spd=20,  ai_fire_rate=6,  color=.Gray,       player_level=1, enemy_level=1},
-	.Chain_Gun = Weapon{ type=.Chain_Gun, handle="Chain Gun", dx=20, dy=1,  init_spd=8,   ai_fire_rate=1,  color=.White,      player_level=1, enemy_level=1},
-	.Twin 	   = Weapon{ type=.Twin, 	  handle="Twin", 	  dx=25, dy=1,  init_spd=4,   ai_fire_rate=4,  color=.Green,      player_level=1, enemy_level=1},
-	.Wave      = Weapon{ type=.Wave,      handle="Wave",      dx=10, dy=2,  init_spd=14,  ai_fire_rate=10, color=.Magenta,	  player_level=1, enemy_level=1},
-	.Barrier   = Weapon{ type=.Barrier,   handle="Barrier",   dx=4,  dy=40, init_spd=4,   ai_fire_rate=8,  color=.Blue, 	  player_level=1, enemy_level=1, accel=0.1},
-	.Splitter  = Weapon{ type=.Splitter,  handle="Splitter",  dx=20, dy=2,  init_spd=15,  ai_fire_rate=4,  color=.Dark_Green, player_level=1, enemy_level=1, vert_spd=6, max_bullets_loaded=18},
+	.Missile   = Weapon{ type=.Missile,   handle="Missile",   dx=20, dy=4,  init_spd=0.4, ai_fire_rate=4,  color=.Yellow,     player_level=1, enemy_level=1},
+	.Homer     = Weapon{ type=.Homer,     handle="Homer",     dx=5,  dy=4,  init_spd=0.4, ai_fire_rate=4,  color=.Cyan,       player_level=1, enemy_level=1},
+	.Nuke      = Weapon{ type=.Nuke,      handle="Nuke",      dx=40, dy=8,  init_spd=4,   ai_fire_rate=10, color=.Red, 		  player_level=1, enemy_level=1},
+	.Knife     = Weapon{ type=.Knife,     handle="Knife",     dx=15, dy=2,  init_spd=20,  ai_fire_rate=6,  color=.Gray,       player_level=1, enemy_level=1},
+	.Chain_Gun = Weapon{ type=.Chain_Gun, handle="Chain Gun", dx=20, dy=2,  init_spd=8,   ai_fire_rate=1,  color=.White,      player_level=1, enemy_level=1},
+	.Twin 	   = Weapon{ type=.Twin, 	  handle="Twin", 	  dx=25, dy=2,  init_spd=4,   ai_fire_rate=4,  color=.Green,      player_level=1, enemy_level=1},
+	.Wave      = Weapon{ type=.Wave,      handle="Wave",      dx=10, dy=4,  init_spd=14,  ai_fire_rate=10, color=.Magenta,	  player_level=1, enemy_level=1},
+	.Barrier   = Weapon{ type=.Barrier,   handle="Barrier",   dx=4,  dy=80, init_spd=4,   ai_fire_rate=8,  color=.Blue, 	  player_level=1, enemy_level=1, accel=0.1},
+	.Splitter  = Weapon{ type=.Splitter,  handle="Splitter",  dx=20, dy=4,  init_spd=15,  ai_fire_rate=4,  color=.Green,      player_level=1, enemy_level=1, vert_spd=6, max_bullets_loaded=18},
 }
 
 // procedures
-game :: proc() {
-	qv.create_window("Arsenal", .Seven_Twenty_P)
-	sw = qv.get_screen_width()
-	sh = qv.get_screen_height()
-	
-	qv.set_text_style(24, 0, 4)
-	for !qv.should_close() {
-		qv.begin()
-		defer qv.present()
+check_collisions :: proc() {
 
-		switch cur_screen {
-		case .Title:
-			title()
-		case .Intro:
-			if !play_intro {
-				cur_screen = .Configure_Ship
-				continue
-			}
-			intro()
-		case .Configure_Ship:
-			configure_ship()
-		case .Battle:
-			battle()
-		}
-	}
-	qv.close()
 }
 
-title :: proc() {
+destruction :: proc() {
+
+}
+
+do_game :: proc() {
+	check_collisions()
+
+	player_control()
+	enemy_control()
+
 	qv.clear_screen(.Black)
-	for i in 1..=60 {
-		phase := math.sin_f32(0.5*f32(i)+qv.get_elapsed_time()*3)
-		qv.sizeable_line(qv.Point{i*sw/60, 1}, qv.Point{sw, i*sh/60}, .Dark_Red, phase+1.2)
-		qv.sizeable_line(qv.Point{1, i*sh/60}, qv.Point{i*sw/60, sh}, .Dark_Red, phase+2.0)
-	}
+	player_graphics()
+	enemy_graphics()
 
-	title := "r10u30r5f30 u30r20d20l20f10r15 r20u15l20u15r20br5 nr20d15nr20d15r25 u30r5f30r5u30br5 nd30r5f30br5 nu30r20"
-	qv.draw("bm280,350 c15 s12")
-	qv.draw(title)
-
-	author := "u15nu15r20d15nl20br5bu15 f15ng15e15bu15br20 nd30r20d30nl20bu10bl5f10 br5u30r20d10nl20bu10br5 r20g30"
-	qv.draw("bm790,420 c9 s4")
-	qv.draw(author)
-
-	qv.print_centered("Press any key to start", qv.get_text_rows()-5, .Gray)
-	if (qv.ready_to_continue(wait_for_keypress = true)) {
-		init()
-		cur_screen = .Intro
-		qv.reset_frame_memory()
-	}
+	process_player_bullets()
+	process_enemy_bullets()
 }
 
-init :: proc() {
-	player.cur_weapon.player_level = 1
-	enemy.cur_weapon.enemy_level = 1
-		  
-	player.x = 30
-	player.y = sh / 2
-	player.hp = 50
-	player.hp_max = 50
-	player.spd = 3
-	player.dx = 14
-	player.dy = 6
-	player.status = .Alive
- 
-	enemy.cur_weapon = weapons[rand.choice_enum(Weapon_Type)]
-	enemy.x = sw - 40
-	enemy.y = sh / 2
-	enemy.hp = 100
-	enemy.hp_max = 100
-	enemy.spd = 3
-	enemy.dx = 14
-	enemy.dy = 6
-	enemy.status = .Alive
-}
-
-intro :: proc() {
+do_intro :: proc() {
 	qv.clear_screen(.Black)
 
 	qv.set_typing_speed(system_typing_speed)
@@ -225,16 +173,106 @@ intro :: proc() {
 	}
 }
 
-configure_ship :: proc() {
+do_loop :: proc() {
+	qv.create_window("Arsenal", .Seven_Twenty_P)
+	sw = qv.get_screen_width()
+	sh = qv.get_screen_height()
+	x_right_threshold = f32(sw) * 0.6
+	x_left_threshold  = f32(sw) * 0.4
+	
+	qv.set_text_style(24, 0, 4)
+	for !qv.should_close() {
+		qv.begin()
+		defer qv.present()
+
+		switch cur_screen {
+		case .Title:
+			do_title()
+		case .Intro:
+			if !play_intro {
+				cur_screen = .Configure_Ship
+				continue
+			}
+			do_intro()
+		case .Configure_Ship:
+			load_settings()
+		case .Battle:
+			do_game()
+		case .Destruction:
+			destruction()
+		case .Victory:
+			victory()
+		}
+	}
+	qv.close()
+}
+
+do_title :: proc() {
+	qv.clear_screen(.Black)
+	for i in 1..=60 {
+		phase := math.sin_f32(0.5*f32(i)+qv.get_elapsed_time()*3)
+		qv.sizeable_line(qv.Point{f32(i*sw/60), 1}, qv.Point{f32(sw), f32(i*sh/60)}, .Dark_Red, phase+1.2)
+		qv.sizeable_line(qv.Point{1, f32(i*sh/60)}, qv.Point{f32(i*sw/60), f32(sh)}, .Dark_Red, phase+2.0)
+	}
+
+	title := "r10u30r5f30 u30r20d20l20f10r15 r20u15l20u15r20br5 nr20d15nr20d15r25 u30r5f30r5u30br5 nd30r5f30br5 nu30r20"
+	qv.draw("bm280,350 c15 s12")
+	qv.draw(title)
+
+	author := "u15nu15r20d15nl20br5bu15 f15ng15e15bu15br20 nd30r20d30nl20bu10bl5f10 br5u30r20d10nl20bu10br5 r20g30"
+	qv.draw("bm790,420 c9 s4")
+	qv.draw(author)
+
+	qv.print_centered("Press any key to start", qv.get_text_rows()-5, .Gray)
+	if (qv.ready_to_continue(wait_for_keypress = true)) {
+		init()
+		cur_screen = .Intro
+		qv.reset_frame_memory()
+	}
+}
+
+enemy_control :: proc() {
+
+}
+
+enemy_graphics :: proc() {
+
+}
+
+init :: proc() {
+	player.cur_weapon.player_level = 1
+	enemy.cur_weapon.enemy_level = 1
+		  
+	player.x = 30
+	player.y = f32(sh / 2)
+	player.hp = 50
+	player.hp_max = 50
+	player.spd = 180
+	player.dx = 24
+	player.dy = 24
+	player.status = .Normal
+ 
+	enemy.x = f32(sw - 40)
+	enemy.y = f32(sh / 2)
+	enemy.hp = 100
+	enemy.hp_max = 100
+	enemy.spd = 180
+	enemy.dx = 24
+	enemy.dy = 24
+	enemy.status = .Normal
+}
+
+load_settings :: proc() {
+	@(static) chosen_weapon_type: Weapon_Type
 	if !weapon_chosen {
 		for kp := rl.GetKeyPressed(); kp != .KEY_NULL; kp=rl.GetKeyPressed() {
 			#partial switch kp {
 			case .UP:
-				new_weapon_idx := int(player.cur_weapon.type)-1 if player.cur_weapon.type != .Missile else int(Weapon_Type.Splitter)
-				player.cur_weapon = weapons[Weapon_Type(new_weapon_idx)]
+				new_weapon_idx := int(chosen_weapon_type)-1 if chosen_weapon_type != .Missile else int(Weapon_Type.Splitter)
+				chosen_weapon_type = Weapon_Type(new_weapon_idx)
 			case .DOWN:
-				new_weapon_idx := int(player.cur_weapon.type)+1 if player.cur_weapon.type != .Splitter else int(Weapon_Type.Missile)
-				player.cur_weapon = weapons[Weapon_Type(new_weapon_idx)]
+				new_weapon_idx := int(chosen_weapon_type)+1 if chosen_weapon_type != .Splitter else int(Weapon_Type.Missile)
+				chosen_weapon_type = Weapon_Type(new_weapon_idx)
 			case .ENTER:
 				weapon_chosen = true
 			}
@@ -244,73 +282,70 @@ configure_ship :: proc() {
 	qv.clear_screen(.Black)
 	qv.set_typing_speed(system_typing_speed)
 	qv.type("A R S E N A L", qv.Text_Point{2, 2}, .Dark_Green)
-	qv.type("Terran craft",  qv.Text_Point{2, 4}, .Cyan)
+	qv.type("Terran craft",  qv.Text_Point{2, 4}, .Red)
 	qv.type(fmt.tprintf("HP:    %i", player.hp),  qv.Text_Point{2, 5}, .Green)
 	qv.type(fmt.tprintf("Speed: %v", player.spd), qv.Text_Point{2, 6}, .Green)
    
-	qv.type("Kulari craft",  qv.Text_Point{40, 4}, .Red)
-	qv.type(fmt.tprintf("HP:     %i", enemy.hp),  qv.Text_Point{40, 5}, .Green)
-	qv.type(fmt.tprintf("Speed:  %v", enemy.spd), qv.Text_Point{40, 6}, .Green)
-	qv.type("Weapon: ", qv.Text_Point{40, 7}, .Green)
+	qv.type("Kulari craft",  qv.Text_Point{40, 4}, .Blue)
+	qv.type(fmt.tprintf("HP:     %i", enemy.hp),  qv.Text_Point{40, 5}, .Dark_Green)
+	qv.type(fmt.tprintf("Speed:  %v", enemy.spd), qv.Text_Point{40, 6}, .Dark_Green)
+	qv.type("Weapon: ", qv.Text_Point{40, 7}, .Dark_Green)
 	qv.type(enemy.cur_weapon.handle, qv.Text_Point{48, 7}, enemy.cur_weapon.color)
  
 	qv.type("Make a weapon selection ([ENTER] to confirm):", qv.Text_Point{2, 9}, .Dark_Green)
 	for wt in Weapon_Type {
-		if player.cur_weapon.type == wt {
+		if chosen_weapon_type == wt {
 			qv.print("- ", qv.Text_Point{2, 10+int(wt)}, weapons[wt].color)
 		}
 		qv.print(weapons[wt].handle, qv.Text_Point{4, 10+int(wt)}, weapons[wt].color)
 	}
 
-	if weapon_chosen {
+	if weapon_chosen && !ships_configured {
 		player_bullets_loaded = 0
 		player.hp = player.hp_max
 		player.x = 30
-		player.y = sh / 2
-		player.status = .Alive
+		player.y = f32(sh / 2)
+		player.status = .Normal
 		load_weapons(.Player)
+		player.cur_weapon = weapons[chosen_weapon_type]
 	
 		enemy_bullets_loaded = 0
 		enemy.direction = .Down if rand.float32() > 0.5 else .Up
 		enemy.hp = enemy.hp_max
-		enemy.x = sw - 40
-		enemy.y = sh / 2
-		enemy.status = .Alive
+		enemy.x = f32(sw - 40)
+		enemy.y = f32(sh / 2)
+		enemy.status = .Normal
 		load_weapons(.Enemy)
+		enemy.cur_weapon = weapons[rand.choice_enum(Weapon_Type)]
 
 		ships_configured = true
 	}
+
 	if ships_configured {
 		qv.type(player.cur_weapon.handle, qv.Text_Point{2, 24}, player.cur_weapon.color)
 		qv.type(" selected. Hit [ENTER] to enage Kulari craft", qv.Text_Point{2+len(player.cur_weapon.handle), 24}, .White)
 		if (qv.ready_to_continue(wait_for_keypress = true)) {
-			fmt.printf("\n%#v\n%#v", player, enemy)
-			fmt.printf("\n%#v\n\n", weapons)
 			cur_screen = .Battle
 			qv.reset_frame_memory()
 		}
 	}
 }
 
-battle :: proc() {
-	qv.clear_screen(.Black)
-	qv.type(fmt.tprintf("You chose the %s", player.cur_weapon.handle), qv.Text_Point{2, 7}, player.cur_weapon.color)
-}
-
 load_weapons :: proc(which: Owner) {
+	ACCEL_FACTOR :: 1.5
 	missile := weapons[.Missile]
 	if which == .Player {
 		if player.cur_weapon.type == .Missile {
 			missile.player_level = player.cur_weapon.player_level
 		}
 		missile.power = player.cur_weapon.player_level + 4
-		missile.accel = f32(player.cur_weapon.player_level + 3) / 10
+		missile.accel = f32(player.cur_weapon.player_level+3) * ACCEL_FACTOR
 	} else {
 		if enemy.cur_weapon.type == .Missile {
 			missile.enemy_level = enemy.cur_weapon.enemy_level
 		}
 		missile.power = enemy.cur_weapon.enemy_level + 4
-		missile.accel = f32(enemy.cur_weapon.enemy_level + 3) / 10
+		missile.accel = f32(enemy.cur_weapon.enemy_level+3) * ACCEL_FACTOR
 	}
 	weapons[.Missile] = missile
 
@@ -320,15 +355,15 @@ load_weapons :: proc(which: Owner) {
 			homer.player_level = player.cur_weapon.player_level
 		}
 		homer.power = player.cur_weapon.player_level + 2
-		homer.accel = f32(player.cur_weapon.player_level / 10)
-		homer.vert_spd = 1 + (player.cur_weapon.player_level / 10)
+		homer.accel = f32(player.cur_weapon.player_level)  * ACCEL_FACTOR
+		homer.vert_spd = 1 + f32(player.cur_weapon.player_level)  * ACCEL_FACTOR
 	} else {
 		if enemy.cur_weapon.type == .Homer {
 			homer.enemy_level = enemy.cur_weapon.enemy_level
 		}
 		homer.power = enemy.cur_weapon.enemy_level + 2
-		homer.accel = f32(enemy.cur_weapon.enemy_level / 10)
-		homer.vert_spd = 1 + (enemy.cur_weapon.enemy_level / 10)
+		homer.accel = f32(enemy.cur_weapon.enemy_level) * ACCEL_FACTOR
+		homer.vert_spd = 1 + f32(enemy.cur_weapon.enemy_level) * ACCEL_FACTOR
 	}
    	weapons[.Homer] = homer
 
@@ -338,7 +373,7 @@ load_weapons :: proc(which: Owner) {
 			nuke.player_level = player.cur_weapon.player_level
 		}
 		nuke.power = player.cur_weapon.player_level * 2 + 10
-		nuke.accel = f32(player.cur_weapon.player_level / 10)
+		nuke.accel = f32(player.cur_weapon.player_level) * ACCEL_FACTOR
 		nuke.hp_max = 20 + (player.cur_weapon.player_level * 2)
 		nuke.max_bullets_loaded = player.cur_weapon.player_level + 4
 	} else {
@@ -346,7 +381,7 @@ load_weapons :: proc(which: Owner) {
 			nuke.enemy_level = enemy.cur_weapon.enemy_level
 		}
 		nuke.power = enemy.cur_weapon.enemy_level * 5 + 3
-		nuke.accel = f32(enemy.cur_weapon.enemy_level / 10)
+		nuke.accel = f32(enemy.cur_weapon.enemy_level) * ACCEL_FACTOR
 		nuke.hp_max = 20 + (enemy.cur_weapon.enemy_level * 2)
 		nuke.max_bullets_loaded = enemy.cur_weapon.enemy_level + 4
 	}
@@ -361,14 +396,14 @@ load_weapons :: proc(which: Owner) {
 			knife.player_level = player.cur_weapon.player_level
 		}
 		knife.power = player.cur_weapon.player_level + 1
-		knife.accel = f32(player.cur_weapon.player_level / 5)
+		knife.accel = f32(player.cur_weapon.player_level) * ACCEL_FACTOR * 0.5
 		knife.max_bullets_loaded = player.cur_weapon.player_level + 3
 	} else {
 		if enemy.cur_weapon.type == .Knife {
 			knife.enemy_level = enemy.cur_weapon.enemy_level
 		}
 		knife.power = enemy.cur_weapon.enemy_level + 1
-		knife.accel = f32(enemy.cur_weapon.enemy_level / 5)
+		knife.accel = f32(enemy.cur_weapon.enemy_level) * ACCEL_FACTOR * 0.5
 		knife.max_bullets_loaded = enemy.cur_weapon.enemy_level + 3
 	}
 	weapons[.Knife] = knife
@@ -379,13 +414,13 @@ load_weapons :: proc(which: Owner) {
 			chain_gun.player_level = player.cur_weapon.player_level
 		}
 		chain_gun.power = player.cur_weapon.player_level + 2
-		chain_gun.accel = f32(player.cur_weapon.player_level + 3 / 10)
+		chain_gun.accel = f32(player.cur_weapon.player_level + 3) * ACCEL_FACTOR
 	} else {
 		if enemy.cur_weapon.type == .Chain_Gun {
 			chain_gun.enemy_level = enemy.cur_weapon.enemy_level
 		}
 		chain_gun.power = enemy.cur_weapon.enemy_level + 2
-		chain_gun.accel = f32(enemy.cur_weapon.enemy_level + 3 / 10)
+		chain_gun.accel = f32(enemy.cur_weapon.enemy_level + 3) * ACCEL_FACTOR
 	}
 	weapons[.Chain_Gun] = chain_gun
 
@@ -395,13 +430,13 @@ load_weapons :: proc(which: Owner) {
 			twin.player_level = player.cur_weapon.player_level
 		}
 		twin.power = player.cur_weapon.player_level + 3
-		twin.accel = f32(player.cur_weapon.player_level + 3 / 10)
+		twin.accel = f32(player.cur_weapon.player_level + 3) * ACCEL_FACTOR
 	} else {
 		if enemy.cur_weapon.type == .Twin {
 			twin.enemy_level = enemy.cur_weapon.enemy_level
 		}
 		twin.power = enemy.cur_weapon.enemy_level + 3
-		twin.accel = f32(enemy.cur_weapon.enemy_level + 3 / 10)
+		twin.accel = f32(enemy.cur_weapon.enemy_level + 3) * ACCEL_FACTOR
 	}
 	weapons[.Twin] = twin
 
@@ -448,15 +483,202 @@ load_weapons :: proc(which: Owner) {
 			splitter.player_level = player.cur_weapon.player_level
 		}
 		splitter.power = player.cur_weapon.player_level + 4
-		splitter.accel = f32(player.cur_weapon.player_level + 3 / 10)
+		splitter.accel = f32(player.cur_weapon.player_level + 3) * ACCEL_FACTOR
 	} else {
 		if enemy.cur_weapon.type == .Splitter {
 			splitter.enemy_level = enemy.cur_weapon.enemy_level
 		}
 		splitter.power = enemy.cur_weapon.enemy_level + 4
-		splitter.accel = f32(enemy.cur_weapon.enemy_level + 3 / 10)
+		splitter.accel = f32(enemy.cur_weapon.enemy_level + 3) * ACCEL_FACTOR
 	}
 	weapons[.Splitter] = splitter
+}
+
+player_control :: proc() {
+	max_bullets_loaded: int
+	@(static)gun_switch: bool
+
+	for pk := rl.GetKeyPressed(); pk != .KEY_NULL; pk = rl.GetKeyPressed() {
+		#partial switch pk {
+		case .UP:
+			player.direction = .Up
+		case .LEFT:
+			player.direction = .Left
+		case .RIGHT:
+			player.direction = .Right
+		case .DOWN:
+			player.direction = .Down
+		case .F:
+			if player.cur_weapon.type == .Chain_Gun {
+				continue
+			}
+			cur_type := player.cur_weapon.type
+			//if cur_type in {.Splitter, .Barrier, .Nuke, .Knife} {
+			if cur_type == .Splitter || cur_type == .Barrier || cur_type == .Nuke || cur_type == .Knife {
+				max_bullets_loaded = player.cur_weapon.max_bullets_loaded
+			} else {
+				max_bullets_loaded = len(player_bullets)
+			}
+			
+			#partial switch cur_type {
+			case .Twin:
+				if player_bullets_loaded < max_bullets_loaded {
+					player_bullets_loaded = player_bullets_loaded+1
+					for &b in player_bullets {
+						if b.status == .Dead {
+							b.status = .Normal
+							b.x = player.x - player.dx
+							b.y = player.y - player.dy*2
+							b.spd = player.cur_weapon.init_spd
+							break
+						}
+					}
+				}
+				if player_bullets_loaded < max_bullets_loaded {
+					player_bullets_loaded = player_bullets_loaded+1
+					for &b in player_bullets {
+						if b.status == .Dead {
+							b.status = .Normal
+							b.x = player.x - player.dx
+							b.y = player.y + player.dy*2
+							b.spd = player.cur_weapon.init_spd
+							break
+						}
+					}
+				}
+			case .Splitter:
+				if player_bullets_loaded < max_bullets_loaded {
+					for i in 1..=3 {
+						if player_bullets_loaded < max_bullets_loaded {
+							player_bullets_loaded = player_bullets_loaded+1
+							for &b in player_bullets {
+								b.status = .Normal
+								b.x   = player.x+player.dx+1
+								b.y   = player.y+(player.dy/2) - 1 - (player.cur_weapon.dy / 2)
+								b.yi  = int(b.y)
+								b.xi  = int(b.x)
+								b.spd = player.cur_weapon.init_spd
+								if i == 1 { b.direction = .Right }
+								if i == 2 { b.direction = .Up }
+								if i == 3 { b.direction = .Down }
+								break
+							}
+						}
+					}
+				}
+			case:
+				if player_bullets_loaded < max_bullets_loaded {
+					player_bullets_loaded = player_bullets_loaded+1
+					for &b in player_bullets {
+						if b.status == .Dead {
+							b.status = .Normal
+							b.x = player.x+player.dx+1
+							b.y = player.y+(player.dy/2) - 1 - (player.cur_weapon.dy / 2)
+							b.yi = int(b.y)
+							b.xi = int(b.x)
+							b.spd = player.cur_weapon.init_spd
+							if player.cur_weapon.type == .Nuke || player.cur_weapon.type == .Barrier {
+								b.hp = player.cur_weapon.hp_max
+							}
+							break
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if !gun_switch && player.cur_weapon.type == .Chain_Gun {
+		if player_bullets_loaded < len(player_bullets) {
+			player_bullets_loaded = player_bullets_loaded+1
+			for &b in player_bullets {
+				if b.status == .Dead {
+					b.status = .Normal
+					b.x = player.x + player.dx + 1
+					b.y = player.y + player.dy / 2 - 1
+					b.spd = player.cur_weapon.init_spd
+				}
+			}
+		}
+	}
+			
+	gun_switch = !gun_switch
+}
+
+player_graphics :: proc() {
+	switch player.direction {
+	case .Up: 
+		new_y := player.y-player.spd*rl.GetFrameTime()
+		player.y = new_y if new_y > 20 else 20
+	case .Left:
+		new_x := player.x-player.spd*rl.GetFrameTime()
+		player.x = new_x if new_x > 0 else 0
+	case .Right:
+		new_x := player.x+player.spd*rl.GetFrameTime()
+		player.x = new_x if new_x < f32(sw)/4-player.dx else f32(sw)/4-player.dx
+	case .Down:
+		new_y := player.y+player.spd*rl.GetFrameTime()
+		player.y = new_y if new_y < f32(sh)-player.dx else f32(sh)-player.dx
+	}	
+
+	qv.rectangle(qv.Point{player.x, player.y}, qv.Point{player.x+player.dx, player.y+player.dy}, .Dark_Red)
+   
+	if player.status == .Exploding {
+		player.exp_counter = player.exp_counter - 1
+		if player.exp_counter <= 0 {
+			player.status = .Normal
+		}
+		qv.circle(qv.Point{player.x+player.dx/2, player.y+player.dy/2}, f32(player.exp_counter * 8), .Red)
+	}
+}
+
+process_enemy_bullets :: proc() {
+
+}
+
+process_player_bullets :: proc() {
+	for &b in player_bullets {
+		#partial switch b.status {
+		case .Normal:
+			b.spd = b.spd + player.cur_weapon.accel
+			if b.x+player.cur_weapon.dx > f32(sw) {
+				b.status = .Dead
+				player_bullets_loaded = player_bullets_loaded-1
+			} else {
+				b.prev_x = b.x
+				b.prev_y = b.y
+				b.x = b.x + b.spd * rl.GetFrameTime()
+				#partial switch player.cur_weapon.type {
+				case .Homer:
+					if b.y > enemy.y { b.direction = .Up }
+					if b.y < enemy.y { b.direction = .Down }
+					if b.direction == .Down { b.y = b.y + player.cur_weapon.vert_spd }
+					if b.direction == .Up   { b.y = b.y - player.cur_weapon.vert_spd }
+				case .Wave:
+					b.y = f32(b.yi) - 20*math.sin_f32(b.x-f32(b.xi) / 50)
+				case .Splitter:
+					if b.x > x_right_threshold {
+						if b.direction == .Down { b.y = b.y + player.cur_weapon.vert_spd }
+						if b.direction == .Up   { b.y = b.y - player.cur_weapon.vert_spd }
+					}
+				}
+				qv.rectangle(qv.Point{b.x, b.y}, qv.Point{b.x+player.cur_weapon.dx, b.y+player.cur_weapon.dy}, player.cur_weapon.color)
+			}
+		case .Exploding:
+			b.exp_counter = b.exp_counter-1
+			if b.exp_counter > 0 {
+				b.x = b.x-b.spd*rl.GetFrameTime()
+				qv.circle(qv.Point{b.x+player.cur_weapon.dx/2, b.y+player.cur_weapon.dy/2}, f32(b.exp_counter*4), player.cur_weapon.color)
+			} else {
+				b.status = .Dead
+				player_bullets_loaded = player_bullets_loaded-1
+			}
+		}
+	}
+}
+
+victory :: proc() {
+	qv.clear_screen(.Black)
 }
 
 main :: proc() {
@@ -482,5 +704,5 @@ main :: proc() {
 		}
 	}
 
-    game()
+    do_loop()
 }

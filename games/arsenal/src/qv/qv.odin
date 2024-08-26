@@ -50,7 +50,7 @@ Palette_Entry :: enum {
 }
 
 Point :: struct {
-    x, y: int
+    x, y: f32
 }
 
 Screen_Mode :: enum {
@@ -136,6 +136,14 @@ begin :: proc() {
     rl.BeginDrawing()
 }
 
+//qv.circle(qv.Point{player.x+player.dx/2, player.y+player.dy/2}, player.exp_counter * 8, .Red)
+
+circle :: proc(center: Point, radius: f32, color: Palette_Color) {
+    real_color := get_color(color)
+
+    rl.DrawCircle(i32(center.x), i32(center.y), radius, real_color)
+}
+
 clear_screen :: proc(color: Palette_Color) {
     rl.ClearBackground(get_color(color))
 }
@@ -162,8 +170,6 @@ create_window :: proc(title: string, screen_mode: Screen_Mode) {
     rl.SetTargetFPS(60)
     state.frame_dur = 60 / 1000
     state.palette = default_palette
-
-    //rl.SetRandomSeed(u32(time.to_unix_nanoseconds(time.now())))
 }
 
 draw :: proc(src: string) {
@@ -291,6 +297,16 @@ ready_to_continue :: proc(wait_for_keypress: bool) -> bool {
     return should_continue
 }
 
+rectangle :: proc(top_left: Point, bottom_right: Point, color: Palette_Color) {
+    real_color := get_color(color)
+
+    rl.DrawRectangle(
+        i32(top_left.x), i32(top_left.y),
+        i32(bottom_right.x - top_left.x), i32(bottom_right.y - top_left.y),
+        real_color
+    )
+}
+
 reset_frame_memory :: proc() {
     clear(&state.completed_timers)
     clear(&state.typing_entries)
@@ -357,8 +373,8 @@ type :: proc(text: string, pos: Text_Point, color: Palette_Color) {
         return
     }
 
-    elapsed_time := rl.GetTime() - entry.start
-    typed_chars  := int(f32(state.typing_cps) * f32(elapsed_time))
+    elapsed_secs := rl.GetTime() - entry.start
+    typed_chars  := int(f32(state.typing_cps) * f32(elapsed_secs))
     if (typed_chars > len(text)) {
         typed_chars = len(text)
         entry.is_done = true
