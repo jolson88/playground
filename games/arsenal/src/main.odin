@@ -93,15 +93,15 @@ x_right_threshold, x_left_threshold: f32
 ships_configured := false
 weapon_chosen    := false
 weapons := map[Weapon_Type]Weapon{
-	.Missile   = Weapon{ type=.Missile,   handle="Missile",   dx=20, dy=4,  init_spd=0.4, ai_fire_rate=4,  color=.Yellow,  player_level=1, enemy_level=1},
-	.Homer     = Weapon{ type=.Homer,     handle="Homer",     dx=6,  dy=6,  init_spd=0.4, ai_fire_rate=4,  color=.Cyan,    player_level=1, enemy_level=1},
-	.Nuke      = Weapon{ type=.Nuke,      handle="Nuke",      dx=40, dy=8,  init_spd=4,   ai_fire_rate=10, color=.Brown,   player_level=1, enemy_level=1},
-	.Knife     = Weapon{ type=.Knife,     handle="Knife",     dx=15, dy=4,  init_spd=800, ai_fire_rate=6,  color=.Gray,    player_level=1, enemy_level=1},
-	.Chain_Gun = Weapon{ type=.Chain_Gun, handle="Chain Gun", dx=20, dy=2,  init_spd=8,   ai_fire_rate=2,  color=.White,   player_level=1, enemy_level=1},
-	.Twin 	   = Weapon{ type=.Twin, 	  handle="Twin", 	  dx=25, dy=2,  init_spd=4,   ai_fire_rate=4,  color=.Green,   player_level=1, enemy_level=1},
-	.Wave      = Weapon{ type=.Wave,      handle="Wave",      dx=10, dy=6,  init_spd=500, ai_fire_rate=6,  color=.Magenta, player_level=1, enemy_level=1},
-	.Barrier   = Weapon{ type=.Barrier,   handle="Barrier",   dx=4,  dy=80, init_spd=4,   ai_fire_rate=8,  color=.Blue,    player_level=1, enemy_level=1, accel=0.1},
-	.Splitter  = Weapon{ type=.Splitter,  handle="Splitter",  dx=20, dy=4,  init_spd=15,  ai_fire_rate=4,  color=.Green,   player_level=1, enemy_level=1, vert_spd=6, max_bullets_loaded=18},
+	.Missile   = Weapon{ type=.Missile,   handle="Missile",   dx=20, dy=4,   init_spd=0.4, ai_fire_rate=4,  color=.Yellow,  player_level=1, enemy_level=1},
+	.Homer     = Weapon{ type=.Homer,     handle="Homer",     dx=6,  dy=6,   init_spd=0.4, ai_fire_rate=4,  color=.Cyan,    player_level=1, enemy_level=1},
+	.Nuke      = Weapon{ type=.Nuke,      handle="Nuke",      dx=40, dy=8,   init_spd=4,   ai_fire_rate=10, color=.Brown,   player_level=1, enemy_level=1},
+	.Knife     = Weapon{ type=.Knife,     handle="Knife",     dx=15, dy=4,   init_spd=800, ai_fire_rate=6,  color=.Gray,    player_level=1, enemy_level=1},
+	.Chain_Gun = Weapon{ type=.Chain_Gun, handle="Chain Gun", dx=20, dy=2,   init_spd=8,   ai_fire_rate=2,  color=.White,   player_level=1, enemy_level=1},
+	.Twin 	   = Weapon{ type=.Twin, 	  handle="Twin", 	  dx=25, dy=2,   init_spd=4,   ai_fire_rate=4,  color=.Green,   player_level=1, enemy_level=1},
+	.Wave      = Weapon{ type=.Wave,      handle="Wave",      dx=10, dy=6,   init_spd=500, ai_fire_rate=6,  color=.Magenta, player_level=1, enemy_level=1},
+	.Barrier   = Weapon{ type=.Barrier,   handle="Barrier",   dx=8,  dy=120, init_spd=200, ai_fire_rate=8,  color=.Blue,    player_level=1, enemy_level=1, accel=2},
+	.Splitter  = Weapon{ type=.Splitter,  handle="Splitter",  dx=20, dy=4,   init_spd=15,  ai_fire_rate=4,  color=.Green,   player_level=1, enemy_level=1, vert_spd=6, max_bullets_loaded=18},
 }
 
 // procedures
@@ -440,12 +440,10 @@ init :: proc() {
 	enemy.dx = 24
 	enemy.dy = 24
 	enemy.status = .Normal
+	enemy.cur_weapon = weapons[.Barrier]
 	load_weapons(.Enemy)
-
-	enemy.cur_weapon = weapons[.Wave]
 	// TODO: Re-enable random after weapons testing
 	//enemy.cur_weapon = weapons[rand.choice_enum(Weapon_Type)]
-	load_weapons(.Enemy)
 }
 
 load_settings :: proc() {
@@ -502,6 +500,7 @@ load_settings :: proc() {
 		enemy.y = f32(sh / 2)
 		enemy.status = .Normal
 		load_weapons(.Enemy)
+		enemy.cur_weapon = weapons[enemy.cur_weapon.type]
 
 		ships_configured = true
 	}
@@ -652,9 +651,9 @@ load_weapons :: proc(which: Owner) {
 	} else {
 		if enemy.cur_weapon.type == .Barrier {
 			barrier.enemy_level = enemy.cur_weapon.enemy_level
-			barrier.power = enemy.cur_weapon.enemy_level + 2
 			barrier.hp_max = 40 + (enemy.cur_weapon.enemy_level * 2)
 			barrier.max_bullets_loaded = enemy.cur_weapon.enemy_level / 5 + 4
+			barrier.power = enemy.cur_weapon.enemy_level + 2
 		}
 	}
 	if barrier.max_bullets_loaded > len(player_bullets) {
