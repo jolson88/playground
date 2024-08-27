@@ -67,7 +67,7 @@ Weapon :: struct {
 	hp_max: int,
 	max_bullets_loaded: int,
 	ai_fire_rate: int,
-	color: qv.Palette_Color,
+	color: rl.Color,
 }
 
 Weapon_Type :: enum {
@@ -99,15 +99,15 @@ x_right_threshold, x_left_threshold: f32
 ships_configured := false
 weapon_chosen    := false
 weapons := map[Weapon_Type]Weapon{
-	.Missile   = Weapon{ type=.Missile,   handle="Missile",   dx=20, dy=4,   init_spd=0.4, ai_fire_rate=4,  color=.Yellow,  player_level=1, enemy_level=1},
-	.Homer     = Weapon{ type=.Homer,     handle="Homer",     dx=10, dy=6,   init_spd=40,  ai_fire_rate=4,  color=.Cyan,    player_level=1, enemy_level=1},
-	.Nuke      = Weapon{ type=.Nuke,      handle="Nuke",      dx=40, dy=8,   init_spd=4,   ai_fire_rate=10, color=.Brown,   player_level=1, enemy_level=1},
-	.Knife     = Weapon{ type=.Knife,     handle="Knife",     dx=15, dy=4,   init_spd=800, ai_fire_rate=6,  color=.Gray,    player_level=1, enemy_level=1},
-	.Chain_Gun = Weapon{ type=.Chain_Gun, handle="Chain Gun", dx=20, dy=2,   init_spd=8,   ai_fire_rate=2,  color=.White,   player_level=1, enemy_level=1},
-	.Twin 	   = Weapon{ type=.Twin, 	  handle="Twin", 	  dx=25, dy=2,   init_spd=4,   ai_fire_rate=4,  color=.Green,   player_level=1, enemy_level=1},
-	.Wave      = Weapon{ type=.Wave,      handle="Wave",      dx=10, dy=6,   init_spd=500, ai_fire_rate=6,  color=.Magenta, player_level=1, enemy_level=1},
-	.Barrier   = Weapon{ type=.Barrier,   handle="Barrier",   dx=8,  dy=120, init_spd=200, ai_fire_rate=8,  color=.Blue,    player_level=1, enemy_level=1, accel=0.4},
-	.Splitter  = Weapon{ type=.Splitter,  handle="Splitter",  dx=20, dy=4,   init_spd=15,  ai_fire_rate=4,  color=.Green,   player_level=1, enemy_level=1, vert_spd=300, max_bullets_loaded=18},
+	.Missile   = Weapon{ type=.Missile,   handle="Missile",   dx=20, dy=4,   init_spd=0.4, ai_fire_rate=4,  color=rl.YELLOW,  player_level=1, enemy_level=1},
+	.Homer     = Weapon{ type=.Homer,     handle="Homer",     dx=10, dy=6,   init_spd=40,  ai_fire_rate=4,  color=rl.SKYBLUE, player_level=1, enemy_level=1},
+	.Nuke      = Weapon{ type=.Nuke,      handle="Nuke",      dx=40, dy=8,   init_spd=4,   ai_fire_rate=10, color=rl.BROWN,   player_level=1, enemy_level=1},
+	.Knife     = Weapon{ type=.Knife,     handle="Knife",     dx=15, dy=4,   init_spd=800, ai_fire_rate=6,  color=rl.GRAY,    player_level=1, enemy_level=1},
+	.Chain_Gun = Weapon{ type=.Chain_Gun, handle="Chain Gun", dx=20, dy=2,   init_spd=8,   ai_fire_rate=2,  color=rl.WHITE,   player_level=1, enemy_level=1},
+	.Twin 	   = Weapon{ type=.Twin, 	  handle="Twin", 	  dx=25, dy=2,   init_spd=4,   ai_fire_rate=4,  color=rl.GREEN,   player_level=1, enemy_level=1},
+	.Wave      = Weapon{ type=.Wave,      handle="Wave",      dx=10, dy=6,   init_spd=500, ai_fire_rate=6,  color=rl.MAGENTA, player_level=1, enemy_level=1},
+	.Barrier   = Weapon{ type=.Barrier,   handle="Barrier",   dx=8,  dy=120, init_spd=200, ai_fire_rate=8,  color=rl.BLUE,    player_level=1, enemy_level=1, accel=0.4},
+	.Splitter  = Weapon{ type=.Splitter,  handle="Splitter",  dx=20, dy=4,   init_spd=15,  ai_fire_rate=4,  color=rl.GREEN,   player_level=1, enemy_level=1, vert_spd=300, max_bullets_loaded=18},
 }
 
 // procedures
@@ -233,38 +233,38 @@ check_collisions :: proc() {
 }
 
 destruction :: proc() {
-	winner_color := qv.Default_Color.Red
+	winner_color := rl.RED
 	winner_label := "Player"
 	if player.hp > enemy.hp {
 		if ship_death_radius < 300 {
 			ship_death_radius = ship_death_radius + (SHIP_EXP_RATE * rl.GetFrameTime())
-			qv.circle(enemy.x+enemy.dx/2, enemy.y+enemy.dy/2, ship_death_radius,   .Blue)
-			qv.circle(enemy.x+enemy.dx/2, enemy.y+enemy.dy/2, ship_death_radius-6, .Black)
+			qv.circle(enemy.x+enemy.dx/2, enemy.y+enemy.dy/2, ship_death_radius,   rl.BLUE)
+			qv.circle(enemy.x+enemy.dx/2, enemy.y+enemy.dy/2, ship_death_radius-6, rl.BLACK)
 		}
 		for &b in enemy_bullets { b.status = .Dead }
 		enemy_bullets_loaded = 0
 	} else {
 		if ship_death_radius < 300 {
 			ship_death_radius = ship_death_radius + (SHIP_EXP_RATE * rl.GetFrameTime())
-			qv.circle(player.x+player.dx/2, player.y+player.dy/2, ship_death_radius,   .Red)
-			qv.circle(player.x+player.dx/2, player.y+player.dy/2, ship_death_radius-6, .Black)
+			qv.circle(player.x+player.dx/2, player.y+player.dy/2, ship_death_radius,   rl.RED)
+			qv.circle(player.x+player.dx/2, player.y+player.dy/2, ship_death_radius-6, rl.BLACK)
 		}
 		for &b in player_bullets { b.status = .Dead }
 		player_bullets_loaded = 0
-		winner_color = .Blue
+		winner_color = rl.BLUE
 		winner_label = "Computer"	
 	}
 
-	qv.print_centered(fmt.tprintf("%s Wins!", winner_label), 10, .Blue)
-	qv.print_centered("Hit [ENTER] to player again, [ESC] to exit", qv.get_text_rows() - 10, .White)
+	qv.print_centered(fmt.tprintf("%s Wins!", winner_label), 10, rl.BLUE)
+	qv.print_centered("Hit [ENTER] to player again, [ESC] to exit", qv.get_text_rows() - 10, rl.WHITE)
 }
 
 display_stats :: proc() {
-	qv.print(fmt.tprintf("HP: %i/%i", player.hp, player.hp_max), qv.Text_Point{2, 1}, .Red)
-	qv.print(fmt.tprintf("[%s-%i]", player.cur_weapon.handle, player.cur_weapon.player_level), qv.Text_Point{21, 1}, .Red)
+	qv.print(fmt.tprintf("HP: %i/%i", player.hp, player.hp_max), qv.Text_Point{2, 1}, rl.RED)
+	qv.print(fmt.tprintf("[%s-%i]", player.cur_weapon.handle, player.cur_weapon.player_level), qv.Text_Point{21, 1}, rl.RED)
  
-	qv.print(fmt.tprintf("[%s-%i]", enemy.cur_weapon.handle, enemy.cur_weapon.player_level), qv.Text_Point{75, 1}, .Blue)
-	qv.print(fmt.tprintf("HP: %i/%i", enemy.hp, enemy.hp_max), qv.Text_Point{95, 1}, .Blue)
+	qv.print(fmt.tprintf("[%s-%i]", enemy.cur_weapon.handle, enemy.cur_weapon.player_level), qv.Text_Point{75, 1}, rl.BLUE)
+	qv.print(fmt.tprintf("HP: %i/%i", enemy.hp, enemy.hp_max), qv.Text_Point{95, 1}, rl.BLUE)
 }
 
 do_battle :: proc() {
@@ -276,7 +276,7 @@ do_battle :: proc() {
 	}
 	enemy_control()
 
-	qv.clear_screen(.Black)
+	qv.clear_screen(rl.BLACK)
 	display_stats()
 	player_graphics()
 	enemy_graphics()
@@ -306,20 +306,20 @@ do_configure_ship :: proc() {
 		}
 	}
 
-	qv.clear_screen(.Black)
+	qv.clear_screen(rl.BLACK)
 	qv.set_typing_speed(DEFAULT_TYPING_SPEED_CPS)
-	qv.type("A R S E N A L", qv.Text_Point{2, 2}, .Dark_Green)
-	qv.type("Terran craft",  qv.Text_Point{2, 4}, .Red)
-	qv.type(fmt.tprintf("HP:    %i", player.hp),  qv.Text_Point{2, 5}, .Green)
-	qv.type(fmt.tprintf("Speed: %v", player.spd), qv.Text_Point{2, 6}, .Green)
+	qv.type("A R S E N A L", qv.Text_Point{2, 2}, rl.DARKGREEN)
+	qv.type("Terran craft",  qv.Text_Point{2, 4}, rl.RED)
+	qv.type(fmt.tprintf("HP:    %i", player.hp),  qv.Text_Point{2, 5}, rl.GREEN)
+	qv.type(fmt.tprintf("Speed: %v", player.spd), qv.Text_Point{2, 6}, rl.GREEN)
    
-	qv.type("Kulari craft",  qv.Text_Point{40, 4}, .Blue)
-	qv.type(fmt.tprintf("HP:     %i", enemy.hp),  qv.Text_Point{40, 5}, .Dark_Green)
-	qv.type(fmt.tprintf("Speed:  %v", enemy.spd), qv.Text_Point{40, 6}, .Dark_Green)
-	qv.type("Weapon: ", qv.Text_Point{40, 7}, .Dark_Green)
+	qv.type("Kulari craft",  qv.Text_Point{40, 4}, rl.BLUE)
+	qv.type(fmt.tprintf("HP:     %i", enemy.hp),  qv.Text_Point{40, 5}, rl.DARKGREEN)
+	qv.type(fmt.tprintf("Speed:  %v", enemy.spd), qv.Text_Point{40, 6}, rl.DARKGREEN)
+	qv.type("Weapon: ", qv.Text_Point{40, 7}, rl.DARKGREEN)
 	qv.type(enemy.cur_weapon.handle, qv.Text_Point{48, 7}, enemy.cur_weapon.color)
  
-	qv.type("Make a weapon selection ([ENTER] to confirm):", qv.Text_Point{2, 9}, .Dark_Green)
+	qv.type("Make a weapon selection ([ENTER] to confirm):", qv.Text_Point{2, 9}, rl.DARKGREEN)
 	for wt in Weapon_Type {
 		if chosen_weapon_type == wt {
 			qv.print("- ", qv.Text_Point{2, 10+int(wt)}, weapons[wt].color)
@@ -352,7 +352,7 @@ do_configure_ship :: proc() {
 
 	if ships_configured {
 		qv.type(player.cur_weapon.handle, qv.Text_Point{2, 24}, player.cur_weapon.color)
-		qv.type(" selected. Hit [ENTER] to enage Kulari craft", qv.Text_Point{2+len(player.cur_weapon.handle), 24}, .White)
+		qv.type(" selected. Hit [ENTER] to enage Kulari craft", qv.Text_Point{2+len(player.cur_weapon.handle), 24}, rl.WHITE)
 		if (qv.ready_to_continue(wait_for_keypress = true)) {
 			cur_screen = .Battle
 			qv.reset_frame_memory()
@@ -361,47 +361,47 @@ do_configure_ship :: proc() {
 }
 
 do_intro :: proc() {
-	qv.clear_screen(.Black)
+	qv.clear_screen(rl.BLACK)
 
 	qv.set_typing_speed(DEFAULT_TYPING_SPEED_CPS)
 
-	qv.type("Welcome to the Arsenal Network", qv.Text_Point{2, 2}, .Green)
+	qv.type("Welcome to the Arsenal Network", qv.Text_Point{2, 2}, rl.GREEN)
 
 	login := "mazer"
 	qv.set_typing_speed(8)
-	qv.print("Login: ", qv.Text_Point{2, 4}, .Green)
+	qv.print("Login: ", qv.Text_Point{2, 4}, rl.GREEN)
 	qv.wait(1000)
-	qv.type(login, qv.Text_Point{9, 4}, .Cyan)
-	qv.print("Password: ", qv.Text_Point{2, 5}, .Green)
+	qv.type(login, qv.Text_Point{9, 4}, rl.SKYBLUE)
+	qv.print("Password: ", qv.Text_Point{2, 5}, rl.GREEN)
 	qv.wait(1200)
-	qv.type("*********", qv.Text_Point{12, 5}, .Cyan)
+	qv.type("*********", qv.Text_Point{12, 5}, rl.SKYBLUE)
 
 	qv.set_typing_speed(DEFAULT_TYPING_SPEED_CPS)
 
-	qv.type("Verifying........", qv.Text_Point{2, 7}, .Green)
-	qv.print("Access granted", qv.Text_Point{2, 8}, .Green)
+	qv.type("Verifying........", qv.Text_Point{2, 7}, rl.GREEN)
+	qv.print("Access granted", qv.Text_Point{2, 8}, rl.GREEN)
 	qv.wait(1000)
 
 	msg := qv.concat("Welcome to the system [", login, "]")
-	qv.type(msg, qv.Text_Point{2, 10}, .Green)
-	qv.type("INCOMING MESSAGE FROM COMMAND - SET PRIORITY 1", qv.Text_Point{2, 11}, .Green)
+	qv.type(msg, qv.Text_Point{2, 10}, rl.GREEN)
+	qv.type("INCOMING MESSAGE FROM COMMAND - SET PRIORITY 1", qv.Text_Point{2, 11}, rl.GREEN)
 	qv.wait(1000)
 	msg = qv.concat("Agent ", login, ", Kurali craft have been detected in sector alpha!")
-	qv.type(msg, qv.Text_Point{2, 13}, .Red)
-	qv.type("Engage and destroy all enemy craft. Kurali have destroyed Terran headquarters", qv.Text_Point{2, 14}, .Red)
-	qv.type("leaving you as our sole countermeasure. Act immediately, as there may not be", qv.Text_Point{2, 15}, .Red)
-	qv.type("much mo^D", qv.Text_Point{2, 16}, .Red)
-	qv.type("<EOF received from client>", qv.Text_Point{2, 17}, .Yellow)
+	qv.type(msg, qv.Text_Point{2, 13}, rl.RED)
+	qv.type("Engage and destroy all enemy craft. Kurali have destroyed Terran headquarters", qv.Text_Point{2, 14}, rl.RED)
+	qv.type("leaving you as our sole countermeasure. Act immediately, as there may not be", qv.Text_Point{2, 15}, rl.RED)
+	qv.type("much mo^D", qv.Text_Point{2, 16}, rl.RED)
+	qv.type("<EOF received from client>", qv.Text_Point{2, 17}, rl.YELLOW)
 
-	qv.print("% ", qv.Text_Point{2, 19}, .Green)
+	qv.print("% ", qv.Text_Point{2, 19}, rl.GREEN)
 	qv.wait(1500)
-	qv.type("exec ./arsenal.sh", qv.Text_Point{4, 19}, .Cyan)
-	qv.type("Security clearance granted ", qv.Text_Point{2, 20}, .Green)
-	qv.type("Are you sure you wish to launch Arsenal? [yn] ", qv.Text_Point{2, 21}, .Green)
+	qv.type("exec ./arsenal.sh", qv.Text_Point{4, 19}, rl.SKYBLUE)
+	qv.type("Security clearance granted ", qv.Text_Point{2, 20}, rl.GREEN)
+	qv.type("Are you sure you wish to launch Arsenal? [yn] ", qv.Text_Point{2, 21}, rl.GREEN)
 	qv.wait(1500)
-	qv.print("y", qv.Text_Point{48, 21}, .Cyan)
+	qv.print("y", qv.Text_Point{48, 21}, rl.SKYBLUE)
 
-	qv.type("[Ready! Press any key to launch]", qv.Text_Point{2, 24}, .White)
+	qv.type("[Ready! Press any key to launch]", qv.Text_Point{2, 24}, rl.WHITE)
 	if (qv.ready_to_continue(wait_for_keypress = true)) {
 		cur_screen = .Configure_Ship
 		qv.reset_frame_memory()
@@ -416,7 +416,7 @@ do_loop :: proc() {
 	x_left_threshold  = f32(sw) * 0.4
 	
 	qv.set_text_style(24, 0, 4)
-	for !qv.should_close() {
+	for !rl.WindowShouldClose() {
 		qv.begin()
 		defer qv.present()
 
@@ -441,11 +441,11 @@ do_loop :: proc() {
 }
 
 do_title :: proc() {
-	qv.clear_screen(.Black)
+	qv.clear_screen(rl.BLACK)
 	for i in 1..=40 {
-		phase := math.sin_f32(0.5*f32(i)+qv.get_elapsed_time()*3)
-		qv.sizeable_line(f32(i*sw/40), 1, f32(sw), f32(i*sh/40), .Red, phase+1.2)
-		qv.sizeable_line(1, f32(i*sh/40), f32(i*sw/40), f32(sh), .Red, phase+1.2)
+		phase := math.sin_f32(0.5*f32(i)+f32(rl.GetTime()*3))
+		qv.sizeable_line(f32(i*sw/40), 1, f32(sw), f32(i*sh/40), rl.RED, phase+1.2)
+		qv.sizeable_line(1, f32(i*sh/40), f32(i*sw/40), f32(sh), rl.RED, phase+1.2)
 	}
 
 	title := "r10u30r5f30 u30r20d20l20f10r15 r20u15l20u15r20br5 nr20d15nr20d15r25 u30r5f30r5u30br5 nd30r5f30br5 nu30r20"
@@ -456,7 +456,7 @@ do_title :: proc() {
 	qv.draw("bm790,420 c9 s4")
 	qv.draw(author)
 
-	qv.print_centered("Press any key to start", qv.get_text_rows()-5, .Gray)
+	qv.print_centered("Press any key to start", qv.get_text_rows()-5, rl.GRAY)
 	if (qv.ready_to_continue(wait_for_keypress = true)) {
 		init()
 		cur_screen = .Intro
@@ -485,24 +485,24 @@ do_victory :: proc() {
 		}
 	}
 
-	qv.clear_screen(.Black)
-	qv.print("Select one of the following options:", qv.Text_Point{2, 2}, .Dark_Green)
+	qv.clear_screen(rl.BLACK)
+	qv.print("Select one of the following options:", qv.Text_Point{2, 2}, rl.DARKGREEN)
 	qv.print(
 		fmt.tprintf("Upgrade %s to level %i", player.cur_weapon.handle, player.cur_weapon.player_level+1),
 		qv.Text_Point{4, 3},
-		.Dark_Green,
+		rl.DARKGREEN,
 	)
 	qv.print(
 		fmt.tprintf("Upgrade hull HP to %i", player.hp_max+20),
 		qv.Text_Point{4, 4},
-		.Dark_Green,
+		rl.DARKGREEN,
 	)
 	qv.print(
 		fmt.tprintf("Upgrade speed to %v", player.spd+20),
 		qv.Text_Point{4, 5},
-		.Dark_Green,
+		rl.DARKGREEN,
 	)
-	qv.print("-", qv.Text_Point{2, 2+current_upgrade}, .Dark_Green)
+	qv.print("-", qv.Text_Point{2, 2+current_upgrade}, rl.DARKGREEN)
  
 	if chosen_upgrade != .Not_Selected {
 		#partial switch chosen_upgrade {
@@ -702,7 +702,7 @@ enemy_graphics :: proc() {
 	}	
 
 	if enemy.hp > 0 {
-		qv.rectangle(enemy.x, enemy.y, enemy.x+enemy.dx, enemy.y+enemy.dy, .Blue)
+		qv.rectangle(enemy.x, enemy.y, enemy.x+enemy.dx, enemy.y+enemy.dy, rl.BLUE)
 	}
    
 	if enemy.status == .Exploding {
@@ -710,7 +710,7 @@ enemy_graphics :: proc() {
 		if enemy.exp_counter <= 0 {
 			enemy.status = .Normal
 		}
-		qv.circle(enemy.x+enemy.dx/2, enemy.y+enemy.dy/2, f32(enemy.exp_counter * 5), .Blue)
+		qv.circle(enemy.x+enemy.dx/2, enemy.y+enemy.dy/2, f32(enemy.exp_counter * 5), rl.BLUE)
 	}
 }
 
@@ -1090,7 +1090,7 @@ player_graphics :: proc() {
 	}	
 
 	if player.hp > 0 {
-		qv.rectangle(player.x, player.y, player.x+player.dx, player.y+player.dy, .Red)
+		qv.rectangle(player.x, player.y, player.x+player.dx, player.y+player.dy, rl.RED)
 	}
    
 	if player.status == .Exploding {
@@ -1098,7 +1098,7 @@ player_graphics :: proc() {
 		if player.exp_counter <= 0 {
 			player.status = .Normal
 		}
-		qv.circle(player.x+player.dx/2, player.y+player.dy/2, f32(player.exp_counter * 5), .Red)
+		qv.circle(player.x+player.dx/2, player.y+player.dy/2, f32(player.exp_counter * 5), rl.RED)
 	}
 }
 
