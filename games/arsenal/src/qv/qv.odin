@@ -25,6 +25,9 @@ Pen_State :: struct {
 
 @(private)
 Qv_State :: struct {
+    // drawing
+    drawing_cps: int,
+
     // screen
     screen_width, screen_height: int,
     screen_mode: Screen_Mode,
@@ -114,19 +117,55 @@ create_window :: proc(title: string, screen_mode: Screen_Mode) {
     }
     rl.InitWindow(i32(state.screen_width), i32(state.screen_height), strings.clone_to_cstring(title, context.temp_allocator))
     rl.SetTargetFPS(60)
+    state.drawing_cps = 1000
     state.frame_dur = 60 / 1000
 }
 
 draw :: proc(src: string) {
-    if should_return() {
-        return
+    text_started := src in state.typing_entries
+    if (state.is_typing && state.typing_text != src) {
+        text_already_finished := state.typing_entries[src].is_done
+        if !text_already_finished {
+            return
+        }
     }
+
     cmds, idx, err := parse_draw_commands(src, context.temp_allocator)
     if err != .None {
         fmt.eprintf("Invalid draw command (%v): %s. Failed at %i", err, src, idx)
         return
     }
 
+    if !text_started {
+        state.is_typing = true
+        state.typing_text = src
+        state.typing_entries[src] = Typing_Entry{
+            start=rl.GetTime(),
+            text=src,
+        }
+    }
+    entry := state.typing_entries[src]
+    if entry.is_done {
+        draw_commands(cmds[:])
+        return
+    }
+
+    elapsed_secs := rl.GetTime()-entry.start
+    typed_cmds   := int(f32(state.drawing_cps) * f32(elapsed_secs))
+    if (typed_cmds >= len(cmds)) {
+        typed_cmds = len(cmds)
+        entry.is_done = true
+        state.typing_entries[src] = entry
+        state.is_typing = false
+        state.typing_text = ""
+    }
+    state.typing_has_started_on_frame = true
+
+    draw_commands(cmds[:typed_cmds])
+}
+
+@(private)
+draw_commands :: proc(cmds: []Draw_Command) {
     for cmd in cmds {
         switch cmd.type {
         case .One_Dimension:
@@ -251,6 +290,10 @@ reset_frame_memory :: proc() {
     clear(&state.typing_entries)
 }
 
+set_drawing_speed :: proc(commands_per_sec: int) {
+    state.drawing_cps = commands_per_sec
+}
+
 set_text_style :: proc(size: int, char_spacing: int, line_spacing: int) {
     // MEM: Cache previously loaded fonts so continued use doesn't result in resource exhaustion
     src_dir := filepath.dir(#file, context.temp_allocator)
@@ -276,8 +319,8 @@ set_text_style :: proc(size: int, char_spacing: int, line_spacing: int) {
     state.text_cols = char_count
 }
 
-set_typing_speed :: proc(cps: int) {
-    state.typing_cps = cps
+set_typing_speed :: proc(chars_per_sec: int) {
+    state.typing_cps = chars_per_sec
 }
 
 sizeable_line :: proc(start_x, start_y, end_x, end_y: f32, color: rl.Color, thickness: f32) {

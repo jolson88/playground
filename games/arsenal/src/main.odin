@@ -416,6 +416,7 @@ do_loop :: proc() {
 	x_left_threshold  = f32(sw) * 0.4
 	
 	qv.set_text_style(24, 0, 4)
+	qv.set_drawing_speed(40)
 	for !rl.WindowShouldClose() {
 		qv.begin()
 		defer qv.present()
