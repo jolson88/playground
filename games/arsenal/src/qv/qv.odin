@@ -49,10 +49,6 @@ Palette_Entry :: enum {
     PF0, PF1, PF2, PF3, PF4, PF5, PF6, PF7, PF8, PF9, PFA, PFB, PFC, PFD, PFE, PFF,
 }
 
-Point :: struct {
-    x, y: f32
-}
-
 Screen_Mode :: enum {
     Ten_Eighty_P = 0,
     Seven_Twenty_P = 1,
@@ -138,10 +134,10 @@ begin :: proc() {
 
 //qv.circle(qv.Point{player.x+player.dx/2, player.y+player.dy/2}, player.exp_counter * 8, .Red)
 
-circle :: proc(center: Point, radius: f32, color: Palette_Color) {
+circle :: proc(center_x, center_y: f32, radius: f32, color: Palette_Color) {
     real_color := get_color(color)
 
-    rl.DrawCircle(i32(center.x), i32(center.y), radius, real_color)
+    rl.DrawCircle(i32(center_x), i32(center_y), radius, real_color)
 }
 
 clear_screen :: proc(color: Palette_Color) {
@@ -254,12 +250,12 @@ get_text_rows :: proc() -> int {
     return state.text_rows
 }
 
-line :: proc(start: Point, end: Point, color: Palette_Color) {
+line :: proc(start_x, start_y, end_x, end_y: f32, color: Palette_Color) {
     if should_return() {
         return
     }
 
-    sizeable_line(start, end, color, 1)
+    sizeable_line(start_x, start_y, end_x, end_y, color, 1)
 }
 
 present :: proc() {
@@ -297,12 +293,12 @@ ready_to_continue :: proc(wait_for_keypress: bool) -> bool {
     return should_continue
 }
 
-rectangle :: proc(top_left: Point, bottom_right: Point, color: Palette_Color) {
+rectangle :: proc(top_left_x, top_left_y, bottom_right_x, bottom_right_y: f32, color: Palette_Color) {
     real_color := get_color(color)
 
     rl.DrawRectangle(
-        i32(top_left.x), i32(top_left.y),
-        i32(bottom_right.x - top_left.x), i32(bottom_right.y - top_left.y),
+        i32(top_left_x), i32(top_left_y),
+        i32(bottom_right_x - top_left_x), i32(bottom_right_y - top_left_y),
         real_color
     )
 }
@@ -345,9 +341,9 @@ should_close :: proc() -> bool {
     return rl.WindowShouldClose()
 }
 
-sizeable_line :: proc(start: Point, end: Point, color: Palette_Color, thickness: f32) {
+sizeable_line :: proc(start_x, start_y, end_x, end_y: f32, color: Palette_Color, thickness: f32) {
     real_color := get_color(color)
-    line_impl(rl.Vector2{f32(start.x), f32(start.y)}, rl.Vector2{f32(end.x), f32(end.y)}, thickness, real_color)
+    line_impl(rl.Vector2{start_x, start_y}, rl.Vector2{end_x, end_y}, thickness, real_color)
 }
 
 type :: proc(text: string, pos: Text_Point, color: Palette_Color) {

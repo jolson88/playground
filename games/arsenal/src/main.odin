@@ -238,16 +238,16 @@ destruction :: proc() {
 	if player.hp > enemy.hp {
 		if ship_death_radius < 300 {
 			ship_death_radius = ship_death_radius + (SHIP_EXP_RATE * rl.GetFrameTime())
-			qv.circle(qv.Point{enemy.x+enemy.dx/2, enemy.y+enemy.dy/2}, ship_death_radius,   .Blue)
-			qv.circle(qv.Point{enemy.x+enemy.dx/2, enemy.y+enemy.dy/2}, ship_death_radius-6, .Black)
+			qv.circle(enemy.x+enemy.dx/2, enemy.y+enemy.dy/2, ship_death_radius,   .Blue)
+			qv.circle(enemy.x+enemy.dx/2, enemy.y+enemy.dy/2, ship_death_radius-6, .Black)
 		}
 		for &b in enemy_bullets { b.status = .Dead }
 		enemy_bullets_loaded = 0
 	} else {
 		if ship_death_radius < 300 {
 			ship_death_radius = ship_death_radius + (SHIP_EXP_RATE * rl.GetFrameTime())
-			qv.circle(qv.Point{player.x+player.dx/2, player.y+player.dy/2}, ship_death_radius,   .Red)
-			qv.circle(qv.Point{player.x+player.dx/2, player.y+player.dy/2}, ship_death_radius-6, .Black)
+			qv.circle(player.x+player.dx/2, player.y+player.dy/2, ship_death_radius,   .Red)
+			qv.circle(player.x+player.dx/2, player.y+player.dy/2, ship_death_radius-6, .Black)
 		}
 		for &b in player_bullets { b.status = .Dead }
 		player_bullets_loaded = 0
@@ -444,8 +444,8 @@ do_title :: proc() {
 	qv.clear_screen(.Black)
 	for i in 1..=40 {
 		phase := math.sin_f32(0.5*f32(i)+qv.get_elapsed_time()*3)
-		qv.sizeable_line(qv.Point{f32(i*sw/40), 1}, qv.Point{f32(sw), f32(i*sh/40)}, .Red, phase+1.2)
-		qv.sizeable_line(qv.Point{1, f32(i*sh/40)}, qv.Point{f32(i*sw/40), f32(sh)}, .Red, phase+1.2)
+		qv.sizeable_line(f32(i*sw/40), 1, f32(sw), f32(i*sh/40), .Red, phase+1.2)
+		qv.sizeable_line(1, f32(i*sh/40), f32(i*sw/40), f32(sh), .Red, phase+1.2)
 	}
 
 	title := "r10u30r5f30 u30r20d20l20f10r15 r20u15l20u15r20br5 nr20d15nr20d15r25 u30r5f30r5u30br5 nd30r5f30br5 nu30r20"
@@ -557,13 +557,13 @@ enemy_bullets_update :: proc() {
 						if b.direction == .Up   { b.y = b.y-enemy.cur_weapon.vert_spd*rl.GetFrameTime() }
 					}
 				}
-				qv.rectangle(qv.Point{b.x, b.y}, qv.Point{b.x+enemy.cur_weapon.dx, b.y+enemy.cur_weapon.dy}, enemy.cur_weapon.color)
+				qv.rectangle(b.x, b.y, b.x+enemy.cur_weapon.dx, b.y+enemy.cur_weapon.dy, enemy.cur_weapon.color)
 			}
 		case .Exploding:
 			b.exp_counter = b.exp_counter-1
 			if b.exp_counter > 0 {
 				b.x = b.x+b.spd*rl.GetFrameTime()
-				qv.circle(qv.Point{b.x+enemy.cur_weapon.dx/2, b.y+enemy.cur_weapon.dy/2}, f32(b.exp_counter*3), enemy.cur_weapon.color)
+				qv.circle(b.x+enemy.cur_weapon.dx/2, b.y+enemy.cur_weapon.dy/2, f32(b.exp_counter*3), enemy.cur_weapon.color)
 			} else {
 				b.status = .Dead
 				enemy_bullets_loaded = enemy_bullets_loaded-1
@@ -702,7 +702,7 @@ enemy_graphics :: proc() {
 	}	
 
 	if enemy.hp > 0 {
-		qv.rectangle(qv.Point{enemy.x, enemy.y}, qv.Point{enemy.x+enemy.dx, enemy.y+enemy.dy}, .Blue)
+		qv.rectangle(enemy.x, enemy.y, enemy.x+enemy.dx, enemy.y+enemy.dy, .Blue)
 	}
    
 	if enemy.status == .Exploding {
@@ -710,7 +710,7 @@ enemy_graphics :: proc() {
 		if enemy.exp_counter <= 0 {
 			enemy.status = .Normal
 		}
-		qv.circle(qv.Point{enemy.x+enemy.dx/2, enemy.y+enemy.dy/2}, f32(enemy.exp_counter * 5), .Blue)
+		qv.circle(enemy.x+enemy.dx/2, enemy.y+enemy.dy/2, f32(enemy.exp_counter * 5), .Blue)
 	}
 }
 
@@ -929,13 +929,13 @@ player_bullets_update :: proc() {
 						if b.direction == .Up   { b.y = b.y - player.cur_weapon.vert_spd*rl.GetFrameTime() }
 					}
 				}
-				qv.rectangle(qv.Point{b.x, b.y}, qv.Point{b.x+player.cur_weapon.dx, b.y+player.cur_weapon.dy}, player.cur_weapon.color)
+				qv.rectangle(b.x, b.y, b.x+player.cur_weapon.dx, b.y+player.cur_weapon.dy, player.cur_weapon.color)
 			}
 		case .Exploding:
 			b.exp_counter = b.exp_counter-1
 			if b.exp_counter > 0 {
 				b.x = b.x-b.spd*rl.GetFrameTime()
-				qv.circle(qv.Point{b.x+player.cur_weapon.dx/2, b.y+player.cur_weapon.dy/2}, f32(b.exp_counter*3), player.cur_weapon.color)
+				qv.circle(b.x+player.cur_weapon.dx/2, b.y+player.cur_weapon.dy/2, f32(b.exp_counter*3), player.cur_weapon.color)
 			} else {
 				b.status = .Dead
 				player_bullets_loaded = player_bullets_loaded-1
@@ -1090,7 +1090,7 @@ player_graphics :: proc() {
 	}	
 
 	if player.hp > 0 {
-		qv.rectangle(qv.Point{player.x, player.y}, qv.Point{player.x+player.dx, player.y+player.dy}, .Red)
+		qv.rectangle(player.x, player.y, player.x+player.dx, player.y+player.dy, .Red)
 	}
    
 	if player.status == .Exploding {
@@ -1098,7 +1098,7 @@ player_graphics :: proc() {
 		if player.exp_counter <= 0 {
 			player.status = .Normal
 		}
-		qv.circle(qv.Point{player.x+player.dx/2, player.y+player.dy/2}, f32(player.exp_counter * 5), .Red)
+		qv.circle(player.x+player.dx/2, player.y+player.dy/2, f32(player.exp_counter * 5), .Red)
 	}
 }
 
