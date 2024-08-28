@@ -6,22 +6,32 @@ import "core:mem"
 import "qv"
 import rl "vendor:raylib"
 
-planet_color: rl.Color
-planet_pos: rl.Vector2
-planet_radius: f32
+// structs
+Planet :: struct {
+	color: rl.Color,
+	pos: rl.Vector2,
+	radius: f32,
+	shield_color: rl.Color,
+	shield_segments: i32,
+}
 
-player_color: rl.Color
-player_angle: f32			// The angle in radians of the ship's position around the planet
-player_distance: f32 		// The distance from the center of the planet in pixels
-player_pos: rl.Vector2
-player_speed_rps: f32		// The player's speed in radians per second around the planet
+Player :: struct {
+	angle: f32,				// Our current position around the planet in radians per second
+	angular_vel: f32,		// The rotational velocity we have in radians per second
+	color: rl.Color,
+	distance: f32,			// The distance between ship's center and planet's center
+	engine_torque: f32,		// Torque in newton meters
+	friction: f32,			// General damping factor for when engines aren't active
+	mass: f32,				// Mass in kilograms
+	pos: rl.Vector2,
+}
 
-shield_radius: f32
-shield_segments: i32
-shield_color: rl.Color
+// variables
+sw, sh: f32
+planet: Planet
+player: Player
 
-sw, sh: f32					// The screen width and screen height
-
+// procedures
 main :: proc() {
     when ODIN_DEBUG {
 		track: mem.Tracking_Allocator
@@ -68,45 +78,52 @@ do_battle :: proc() {
 init :: proc() {
 	sw, sh = f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())
 
-	planet_pos      = rl.Vector2{sw*0.1, sh*0.85}
-	planet_color    = rl.DARKGREEN
-	planet_radius   = 30
+	planet.pos             = rl.Vector2{sw*0.1, sh*0.85}
+	planet.color           = rl.DARKGREEN
+	planet.radius          = 30
+	planet.shield_color    = rl.DARKBLUE
+	planet.shield_segments = 8
 
-	player_angle     = 5.5
-	player_color     = rl.LIGHTGRAY
-	player_distance  = 60
-	player_speed_rps = 2
-
-	shield_color    = rl.DARKBLUE
-	shield_radius   = planet_radius+12
-	shield_segments = 8
+	player.angle         = 5.5
+	player.color         = rl.SKYBLUE
+	player.distance      = 60
+	player.engine_torque = 30000
+	player.friction      = 2.0
+	player.mass	         = 8000
 }
 
 player_input :: proc() {
+	angular_accel: f32
 	dt := rl.GetFrameTime()
-	if rl.IsKeyDown(.RIGHT) { player_angle = player_angle + player_speed_rps * dt }
-	if rl.IsKeyDown(.LEFT)  { player_angle = player_angle - player_speed_rps * dt }
+	if rl.IsKeyDown(.RIGHT) { angular_accel = +player.engine_torque / player.mass }
+	if rl.IsKeyDown(.LEFT)  { angular_accel = -player.engine_torque / player.mass }
 
-	if (player_angle > math.TAU) { player_angle = player_angle-math.TAU }
-	if (player_angle < 0)        { player_angle = player_angle+math.TAU }
+	player.angular_vel = player.angular_vel + angular_accel * dt
+	player.angular_vel = player.angular_vel * (1 - player.friction * dt)
+
+	player.angle = player.angle + player.angular_vel * dt
+	if (player.angle > math.TAU) { player.angle = player.angle-math.TAU }
+	if (player.angle < 0)        { player.angle = player.angle+math.TAU }
 	
-	player_pos.x = planet_pos.x + player_distance * math.cos_f32(player_angle)
-	player_pos.y = planet_pos.y + player_distance * math.sin_f32(player_angle)
+	player.pos.x = planet.pos.x + player.distance * math.cos_f32(player.angle)
+	player.pos.y = planet.pos.y + player.distance * math.sin_f32(player.angle)
 }
 
 render_planet :: proc() {
-	rl.DrawCircleV(planet_pos, planet_radius, planet_color)
-	rl.DrawRing(planet_pos, shield_radius, shield_radius+5, 0, 360, shield_segments, shield_color)
+	shield_radius := planet.radius+12
+
+	rl.DrawCircleV(planet.pos, planet.radius, planet.color)
+	rl.DrawRing(planet.pos, shield_radius, shield_radius+5, 0, 360, planet.shield_segments, planet.shield_color)
 }
 
 render_player :: proc() {
-    ship_len: f32   = 12
-    ship_width: f32 = 8
+    ship_len: f32   = 15
+    ship_width: f32 = 15
 
-    direction := rl.Vector2{math.cos_f32(player_angle), math.sin_f32(player_angle)}
-    p1 := rl.Vector2{ player_pos.x + direction.y * ship_width / 2, player_pos.y - direction.x * ship_width / 2 }
-    p2 := rl.Vector2{ player_pos.x - direction.y * ship_width / 2, player_pos.y + direction.x * ship_width / 2 }
-	p3 := player_pos + direction * ship_len
+    direction := rl.Vector2{math.cos_f32(player.angle), math.sin_f32(player.angle)}
+    p1 := rl.Vector2{ player.pos.x + direction.y * ship_width / 2, player.pos.y - direction.x * ship_width / 2 }
+    p2 := rl.Vector2{ player.pos.x - direction.y * ship_width / 2, player.pos.y + direction.x * ship_width / 2 }
+	p3 := player.pos + direction * ship_len
 
-    rl.DrawTriangle(p1, p2, p3, player_color);
+    rl.DrawTriangle(p1, p2, p3, player.color);
 }
