@@ -85,7 +85,7 @@ Weapon_Type :: enum {
 // variables
 CHAINGUN_COOLDOWN_MS     :: 50
 DEFAULT_TYPING_SPEED_CPS :: 32
-INTRO_DISABLED           :: true
+INTRO_DISABLED           :: false
 SHIP_EXP_RATE			 :: 200
 
 sh, sw: int
