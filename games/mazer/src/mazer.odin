@@ -74,7 +74,7 @@ init :: proc() {
 
 	player_angle     = 5.5
 	player_color     = rl.LIGHTGRAY
-	player_distance  = 65
+	player_distance  = 60
 	player_speed_rps = 2
 
 	shield_color    = rl.DARKBLUE
@@ -100,5 +100,13 @@ render_planet :: proc() {
 }
 
 render_player :: proc() {
-	rl.DrawCircleV(player_pos, 6, rl.LIGHTGRAY)
+    ship_len: f32   = 12
+    ship_width: f32 = 8
+
+    direction := rl.Vector2{math.cos_f32(player_angle), math.sin_f32(player_angle)}
+    p1 := rl.Vector2{ player_pos.x + direction.y * ship_width / 2, player_pos.y - direction.x * ship_width / 2 }
+    p2 := rl.Vector2{ player_pos.x - direction.y * ship_width / 2, player_pos.y + direction.x * ship_width / 2 }
+	p3 := player_pos + direction * ship_len
+
+    rl.DrawTriangle(p1, p2, p3, player_color);
 }
