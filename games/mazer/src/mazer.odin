@@ -11,8 +11,7 @@ Planet :: struct {
 	color: rl.Color,
 	pos: rl.Vector2,
 	radius: f32,
-	shield_color: rl.Color,
-	shield_segments: i32,
+	population: i64,
 }
 
 Player :: struct {
@@ -78,15 +77,13 @@ do_battle :: proc() {
 init :: proc() {
 	sw, sh = f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())
 
-	planet.pos             = rl.Vector2{sw*0.1, sh*0.85}
+	planet.pos             = rl.Vector2{sw*0.05, sh*0.9}
 	planet.color           = rl.DARKGREEN
 	planet.radius          = 30
-	planet.shield_color    = rl.DARKBLUE
-	planet.shield_segments = 8
 
 	player.angle         = 5.5
 	player.color         = rl.SKYBLUE
-	player.distance      = 60
+	player.distance      = 40
 	player.engine_torque = 30000
 	player.friction      = 2.0
 	player.mass	         = 8000
@@ -110,10 +107,7 @@ player_input :: proc() {
 }
 
 render_planet :: proc() {
-	shield_radius := planet.radius+12
-
 	rl.DrawCircleV(planet.pos, planet.radius, planet.color)
-	rl.DrawRing(planet.pos, shield_radius, shield_radius+5, 0, 360, planet.shield_segments, planet.shield_color)
 }
 
 render_player :: proc() {
