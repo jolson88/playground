@@ -147,11 +147,11 @@ render_hud :: proc() {
 	label      := "score"
 	label_c    := strings.clone_to_cstring(label, context.temp_allocator)
 	label_size := rl.MeasureTextEx(hud_font, label_c, f32(hud_font_size), 0)
-	label_x    := (sw - label_size.x) / 2
+	label_x    := (sw/2) - (label_size.x/2)
 	rl.DrawTextEx(hud_font, label_c, rl.Vector2{label_x, segment_digit_height}, f32(hud_font_size), 0, rl.BLUE)
 	seven_segment_display(
 		player.score, MAX_SCORE_DIGITS,
-		rl.Vector2{sw/2, (segment_digit_height/2)+segment_padding},
+		rl.Vector2{label_x+(label_size.x/2), (segment_digit_height/2)+segment_padding},
 		segment_digit_height,
 		segment_padding,
 		rl.LIGHTGRAY
