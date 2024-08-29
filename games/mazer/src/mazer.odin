@@ -28,12 +28,18 @@ Player :: struct {
 	score: i64,
 }
 
+Battle :: struct {
+	wave: i64,
+}
+
 // variables
-MAX_SCORE_DIGITS :: 7
+MAX_POP_DIGITS   :: 12
+MAX_SCORE_DIGITS :: 8
 sw, sh: f32
 hud_font: rl.Font
 hud_font_size: i32 = 36
 
+battle: Battle
 planet: Planet
 player: Player
 
@@ -103,16 +109,18 @@ do_battle :: proc() {
 init :: proc() {
 	sw, sh = f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())
 
-	planet.pos             = rl.Vector2{sw*0.05, sh*0.9}
-	planet.color           = rl.DARKGREEN
-	planet.radius          = 30
+	planet.pos        = rl.Vector2{sw*0.05, sh*0.9}
+	planet.color      = rl.DARKGREEN
+	planet.population = 6_000_000_000
+	planet.radius     = 30
 
 	player.angle         = 5.5
-	player.color         = rl.SKYBLUE
+	player.color         = rl.BLUE
 	player.distance      = 40
-	player.engine_torque = 30000
-	player.friction      = 2.0
-	player.mass	         = 8000
+	player.engine_torque = 30_000
+	player.friction      = 1.8
+	player.mass	         = 7_000
+	player.score		 = 0
 }
 
 player_input :: proc() {
@@ -133,17 +141,43 @@ player_input :: proc() {
 }
 
 render_hud :: proc() {
-	score_label := "score"
-	segment_digit_height: f32 = 32
+	segment_digit_height: f32 = 28
 	segment_padding: f32 = 4
 
-	score_c := strings.clone_to_cstring(score_label, context.temp_allocator)
-	text_size := rl.MeasureTextEx(hud_font, score_c, f32(hud_font_size), 0)
-	sw_rem := sw - text_size.x
-	rl.DrawTextEx(hud_font, score_c, rl.Vector2{sw_rem/2, segment_digit_height}, f32(hud_font_size), 0, rl.BLUE)
-
+	label      := "score"
+	label_c    := strings.clone_to_cstring(label, context.temp_allocator)
+	label_size := rl.MeasureTextEx(hud_font, label_c, f32(hud_font_size), 0)
+	label_x    := (sw - label_size.x) / 2
+	rl.DrawTextEx(hud_font, label_c, rl.Vector2{label_x, segment_digit_height}, f32(hud_font_size), 0, rl.BLUE)
 	seven_segment_display(
+		player.score, MAX_SCORE_DIGITS,
 		rl.Vector2{sw/2, (segment_digit_height/2)+segment_padding},
+		segment_digit_height,
+		segment_padding,
+		rl.LIGHTGRAY
+	)
+
+	label      = "population"
+	label_c    = strings.clone_to_cstring(label, context.temp_allocator)
+	label_size = rl.MeasureTextEx(hud_font, label_c, f32(hud_font_size), 0)
+	label_x    = 60
+	rl.DrawTextEx(hud_font, label_c, rl.Vector2{label_x, segment_digit_height}, f32(hud_font_size), 0, rl.BLUE)
+	seven_segment_display(
+		planet.population, MAX_POP_DIGITS,
+		rl.Vector2{label_x+(label_size.x/2), (segment_digit_height/2)+segment_padding},
+		segment_digit_height,
+		segment_padding,
+		rl.LIGHTGRAY
+	)
+
+	label      = "wave"
+	label_c    = strings.clone_to_cstring(label, context.temp_allocator)
+	label_size = rl.MeasureTextEx(hud_font, label_c, f32(hud_font_size), 0)
+	label_x    = sw-label_size.x-60
+	rl.DrawTextEx(hud_font, label_c, rl.Vector2{label_x, segment_digit_height}, f32(hud_font_size), 0, rl.BLUE)
+	seven_segment_display(
+		battle.wave, 3,
+		rl.Vector2{label_x+(label_size.x/2), (segment_digit_height/2)+segment_padding},
 		segment_digit_height,
 		segment_padding,
 		rl.LIGHTGRAY
@@ -166,15 +200,27 @@ render_player :: proc() {
     rl.DrawTriangle(p1, p2, p3, player.color);
 }
 
-seven_segment_display :: proc(center: rl.Vector2, digit_height: f32, padding: f32, color: rl.Color) {
+seven_segment_display :: proc(val: i64, digits: i8, center: rl.Vector2, digit_height: f32, padding: f32, color: rl.Color) {
 	digit_width := digit_height / 2
-	display_width  := digit_width*MAX_SCORE_DIGITS + padding*MAX_SCORE_DIGITS
+	display_width  := digit_width*f32(digits) + padding*f32(digits)
 	display_height := digit_height
-
-	num := "0123456"
-	seg_size: f32 = 4
+	seg_size: f32 = 3
 	seg_width: f32 = digit_width-(seg_size*2)
 	seg_height: f32 = (digit_height-seg_size*3)/2
+
+	// Generate a string of length `digits`, padded left with 0s, of the value `val`
+	num_buf := make_slice([]u8, digits*2, context.temp_allocator)
+	for i in 0..<len(num_buf) {
+		num_buf[i] = '0'
+	}
+	if val > 0 {
+		num_raw := fmt.tprintf("%i", val)
+		for i := 0; i < math.min(int(digits), len(num_raw)); i=i+1 {
+			num_buf[len(num_buf)-1-i] = num_raw[len(num_raw)-1-i]
+		}
+	}
+	num := string(num_buf[digits:digits*2])
+
 	seg_x: f32 = center.x-(display_width/2)
 	seg_y: f32 = center.y-(display_height/2)
 	for r in num {
