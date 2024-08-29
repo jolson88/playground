@@ -1,6 +1,7 @@
 package qv
 
 import "core:fmt"
+import "core:math"
 import "core:path/filepath"
 import "core:strings"
 import rl "vendor:raylib"
@@ -79,6 +80,18 @@ Typing_Entry :: struct {
     rl.MAGENTA,
     rl.YELLOW,
     rl.WHITE,
+}
+@(private) segment_lookup := map[rune][7]u8{
+	'0' = [7]u8{ 1, 1, 1, 1, 1, 1, 0 },
+	'1' = [7]u8{ 0, 1, 1, 0, 0, 0, 0 },
+	'2' = [7]u8{ 1, 1, 0, 1, 1, 0, 1 },
+	'3' = [7]u8{ 1, 1, 1, 1, 0, 0, 1 },
+	'4' = [7]u8{ 0, 1, 1, 0, 0, 1, 1 },
+	'5' = [7]u8{ 1, 0, 1, 1, 0, 1, 1 },
+	'6' = [7]u8{ 1, 0, 1, 1, 1, 1, 1 },
+	'7' = [7]u8{ 1, 1, 1, 0, 0, 0, 0 },
+	'8' = [7]u8{ 1, 1, 1, 1, 1, 1, 1 },
+	'9' = [7]u8{ 1, 1, 1, 1, 0, 1, 1 },
 }
 @(private) state: Qv_State
 @(private) pen_state: Pen_State
@@ -325,6 +338,48 @@ set_text_style :: proc(size: int, char_spacing: int, line_spacing: int) {
 
 set_typing_speed :: proc(chars_per_sec: int) {
     state.typing_cps = chars_per_sec
+}
+
+seven_segment_display :: proc(val: i64, digits: i8, center: rl.Vector2, digit_height: f32, segment_size: f32, color: rl.Color) {
+	digit_width    := digit_height / 2
+	display_width  := digit_width*f32(digits) + segment_size*f32(digits)
+	display_height := digit_height
+	seg_width: f32  = (digit_width-(segment_size*2))
+	seg_height: f32 = (digit_height-segment_size*3)/2
+
+	// Generate a string of length `digits`, padded left with 0s, of the value `val`
+	num_buf := make_slice([]u8, digits*2, context.temp_allocator)
+	for i in 0..<len(num_buf) {
+		num_buf[i] = '0'
+	}
+	if val > 0 {
+		num_raw := fmt.tprintf("%i", val)
+		for i := 0; i < math.min(int(digits), len(num_raw)); i=i+1 {
+			num_buf[len(num_buf)-1-i] = num_raw[len(num_raw)-1-i]
+		}
+	}
+	num := string(num_buf[digits:digits*2])
+
+	seg_x: f32 = center.x-(display_width /2)
+	seg_y: f32 = center.y-(display_height/2)
+	for r in num {
+		segments := segment_lookup[r]
+		for seg_pat, seg in segments {
+			if seg_pat <= 0 {
+				continue
+			}
+			switch seg {
+			case 0: rl.DrawRectangleV(rl.Vector2{ seg_x+segment_size,           seg_y },                             rl.Vector2{ seg_width, segment_size },   color)
+			case 1: rl.DrawRectangleV(rl.Vector2{ seg_x+seg_width+segment_size, seg_y+segment_size },                rl.Vector2{ segment_size,  seg_height }, color)
+			case 2: rl.DrawRectangleV(rl.Vector2{ seg_x+seg_width+segment_size, seg_y+segment_size*2+seg_height },   rl.Vector2{ segment_size,  seg_height }, color)
+			case 3: rl.DrawRectangleV(rl.Vector2{ seg_x+segment_size,           seg_y+segment_size*2+seg_height*2 }, rl.Vector2{ seg_width, segment_size },   color)
+			case 4: rl.DrawRectangleV(rl.Vector2{ seg_x,                        seg_y+seg_height+segment_size*2 },   rl.Vector2{ segment_size,  seg_height }, color)
+			case 5: rl.DrawRectangleV(rl.Vector2{ seg_x,                        seg_y+segment_size },                rl.Vector2{ segment_size,  seg_height }, color)
+			case 6: rl.DrawRectangleV(rl.Vector2{ seg_x+segment_size,           seg_y+segment_size+seg_height },     rl.Vector2{ seg_width, segment_size },   color)
+			}
+		}
+		seg_x = seg_x+digit_width+segment_size
+	}
 }
 
 sizeable_line :: proc(start_x, start_y, end_x, end_y: f32, color: rl.Color, thickness: f32) {

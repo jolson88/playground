@@ -43,19 +43,6 @@ battle: Battle
 planet: Planet
 player: Player
 
-segment_lookup := map[rune][7]u8{
-	'0' = [7]u8{ 1, 1, 1, 1, 1, 1, 0 },
-	'1' = [7]u8{ 0, 1, 1, 0, 0, 0, 0 },
-	'2' = [7]u8{ 1, 1, 0, 1, 1, 0, 1 },
-	'3' = [7]u8{ 1, 1, 1, 1, 0, 0, 1 },
-	'4' = [7]u8{ 0, 1, 1, 0, 0, 1, 1 },
-	'5' = [7]u8{ 1, 0, 1, 1, 0, 1, 1 },
-	'6' = [7]u8{ 1, 0, 1, 1, 1, 1, 1 },
-	'7' = [7]u8{ 1, 1, 1, 0, 0, 0, 0 },
-	'8' = [7]u8{ 1, 1, 1, 1, 1, 1, 1 },
-	'9' = [7]u8{ 1, 1, 1, 1, 0, 1, 1 },
-}
-
 // procedures
 main :: proc() {
     when ODIN_DEBUG {
@@ -142,18 +129,18 @@ player_input :: proc() {
 
 render_hud :: proc() {
 	segment_digit_height: f32 = 28
-	segment_padding: f32 = 4
+	segment_size: f32 = 3
 
 	label      := "score"
 	label_c    := strings.clone_to_cstring(label, context.temp_allocator)
 	label_size := rl.MeasureTextEx(hud_font, label_c, f32(hud_font_size), 0)
 	label_x    := (sw/2) - (label_size.x/2)
 	rl.DrawTextEx(hud_font, label_c, rl.Vector2{label_x, segment_digit_height}, f32(hud_font_size), 0, rl.BLUE)
-	seven_segment_display(
+	qv.seven_segment_display(
 		player.score, MAX_SCORE_DIGITS,
-		rl.Vector2{label_x+(label_size.x/2), (segment_digit_height/2)+segment_padding},
+		rl.Vector2{ label_x+(label_size.x/2), (segment_digit_height/2)+segment_size },
 		segment_digit_height,
-		segment_padding,
+		segment_size,
 		rl.LIGHTGRAY
 	)
 
@@ -162,11 +149,11 @@ render_hud :: proc() {
 	label_size = rl.MeasureTextEx(hud_font, label_c, f32(hud_font_size), 0)
 	label_x    = 60
 	rl.DrawTextEx(hud_font, label_c, rl.Vector2{label_x, segment_digit_height}, f32(hud_font_size), 0, rl.BLUE)
-	seven_segment_display(
+	qv.seven_segment_display(
 		planet.population, MAX_POP_DIGITS,
-		rl.Vector2{label_x+(label_size.x/2), (segment_digit_height/2)+segment_padding},
+		rl.Vector2{ label_x+(label_size.x/2), (segment_digit_height/2)+segment_size },
 		segment_digit_height,
-		segment_padding,
+		segment_size,
 		rl.LIGHTGRAY
 	)
 
@@ -175,11 +162,11 @@ render_hud :: proc() {
 	label_size = rl.MeasureTextEx(hud_font, label_c, f32(hud_font_size), 0)
 	label_x    = sw-label_size.x-60
 	rl.DrawTextEx(hud_font, label_c, rl.Vector2{label_x, segment_digit_height}, f32(hud_font_size), 0, rl.BLUE)
-	seven_segment_display(
+	qv.seven_segment_display(
 		battle.wave, 3,
-		rl.Vector2{label_x+(label_size.x/2), (segment_digit_height/2)+segment_padding},
+		rl.Vector2{ label_x+(label_size.x/2), (segment_digit_height/2)+segment_size },
 		segment_digit_height,
-		segment_padding,
+		segment_size,
 		rl.LIGHTGRAY
 	)
 }
@@ -197,48 +184,5 @@ render_player :: proc() {
     p2 := rl.Vector2{ player.pos.x - direction.y * ship_width / 2, player.pos.y + direction.x * ship_width / 2 }
 	p3 := player.pos + direction * ship_len
 
-    rl.DrawTriangle(p1, p2, p3, player.color);
-}
-
-seven_segment_display :: proc(val: i64, digits: i8, center: rl.Vector2, digit_height: f32, padding: f32, color: rl.Color) {
-	digit_width := digit_height / 2
-	display_width  := digit_width*f32(digits) + padding*f32(digits)
-	display_height := digit_height
-	seg_size: f32 = 3
-	seg_width: f32 = digit_width-(seg_size*2)
-	seg_height: f32 = (digit_height-seg_size*3)/2
-
-	// Generate a string of length `digits`, padded left with 0s, of the value `val`
-	num_buf := make_slice([]u8, digits*2, context.temp_allocator)
-	for i in 0..<len(num_buf) {
-		num_buf[i] = '0'
-	}
-	if val > 0 {
-		num_raw := fmt.tprintf("%i", val)
-		for i := 0; i < math.min(int(digits), len(num_raw)); i=i+1 {
-			num_buf[len(num_buf)-1-i] = num_raw[len(num_raw)-1-i]
-		}
-	}
-	num := string(num_buf[digits:digits*2])
-
-	seg_x: f32 = center.x-(display_width/2)
-	seg_y: f32 = center.y-(display_height/2)
-	for r in num {
-		segments := segment_lookup[r]
-		for seg_pat, seg in segments {
-			if seg_pat <= 0 {
-				continue
-			}
-			switch seg {
-			case 0: rl.DrawRectangleV(rl.Vector2{seg_x+seg_size, seg_y}, rl.Vector2{seg_width, seg_size}, color)
-			case 1: rl.DrawRectangleV(rl.Vector2{seg_x+seg_width+seg_size, seg_y+seg_size}, rl.Vector2{seg_size, seg_height}, color)
-			case 2: rl.DrawRectangleV(rl.Vector2{seg_x+seg_width+seg_size, seg_y+seg_size*2+seg_height}, rl.Vector2{seg_size, seg_height}, color)
-			case 3: rl.DrawRectangleV(rl.Vector2{seg_x+seg_size, seg_y+seg_size*2+seg_height*2}, rl.Vector2{seg_width, seg_size}, color)
-			case 4: rl.DrawRectangleV(rl.Vector2{seg_x, seg_y+seg_height+seg_size*2}, rl.Vector2{seg_size, seg_height}, color)
-			case 5: rl.DrawRectangleV(rl.Vector2{seg_x, seg_y+seg_size}, rl.Vector2{seg_size, seg_height}, color)
-			case 6: rl.DrawRectangleV(rl.Vector2{seg_x+seg_size, seg_y+seg_size+seg_height}, rl.Vector2{seg_width, seg_size}, color)
-			}
-		}
-		seg_x = seg_x+digit_width+padding
-	}
+    rl.DrawTriangle(p1, p2, p3, player.color)
 }
