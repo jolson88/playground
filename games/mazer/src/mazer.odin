@@ -43,17 +43,17 @@ battle: Battle
 planet: Planet
 player: Player
 
-segment_lookup := map[rune][7]bool{
-	'0' = [7]bool{ true,  true,  true,  true,  true,  true,  false },
-	'1' = [7]bool{ false, true,  true,  false, false, false, false },
-	'2' = [7]bool{ true,  true,  false, true,  true,  false, true  },
-	'3' = [7]bool{ true,  true,  true,  true,  false, false, true  },
-	'4' = [7]bool{ false, true,  true,  false, false, true,  true  },
-	'5' = [7]bool{ true,  false, true,  true,  false, true,  true  },
-	'6' = [7]bool{ true,  false, true,  true,  true,  true,  true  },
-	'7' = [7]bool{ true,  true,  true,  false, false, false, false },
-	'8' = [7]bool{ true,  true,  true,  true,  true,  true,  true  },
-	'9' = [7]bool{ true,  true,  true,  true,  false, true,  true  },
+segment_lookup := map[rune][7]u8{
+	'0' = [7]u8{ 1, 1, 1, 1, 1, 1, 0 },
+	'1' = [7]u8{ 0, 1, 1, 0, 0, 0, 0 },
+	'2' = [7]u8{ 1, 1, 0, 1, 1, 0, 1 },
+	'3' = [7]u8{ 1, 1, 1, 1, 0, 0, 1 },
+	'4' = [7]u8{ 0, 1, 1, 0, 0, 1, 1 },
+	'5' = [7]u8{ 1, 0, 1, 1, 0, 1, 1 },
+	'6' = [7]u8{ 1, 0, 1, 1, 1, 1, 1 },
+	'7' = [7]u8{ 1, 1, 1, 0, 0, 0, 0 },
+	'8' = [7]u8{ 1, 1, 1, 1, 1, 1, 1 },
+	'9' = [7]u8{ 1, 1, 1, 1, 0, 1, 1 },
 }
 
 // procedures
@@ -225,8 +225,8 @@ seven_segment_display :: proc(val: i64, digits: i8, center: rl.Vector2, digit_he
 	seg_y: f32 = center.y-(display_height/2)
 	for r in num {
 		segments := segment_lookup[r]
-		for seg_on, seg in segments {
-			if !seg_on {
+		for seg_pat, seg in segments {
+			if seg_pat <= 0 {
 				continue
 			}
 			switch seg {
