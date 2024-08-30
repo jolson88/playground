@@ -15,18 +15,50 @@ Card_Suit :: enum {
 	Spades,
 }
 
+Card_Value :: enum {
+	Ace,
+	Two,
+	Three,
+	Four,
+	Five,
+	Six,
+	Seven,
+	Eight,
+	Nine,
+	Ten,
+	Jack,
+	Queen,
+	King,
+}
+
 // variables
 sw, sh: f32
 
-bg_col_pri := rl.ColorFromHSV(132, 0.53, 0.59)
-bg_col_sec := rl.ColorFromHSV(121, 0.56, 0.38)
-bg_col_trt := rl.ColorFromHSV(108, 0.77, 0.24)
+bg_col_pri  := rl.ColorFromHSV(132, 0.53, 0.59)
+bg_col_sec  := rl.ColorFromHSV(121, 0.56, 0.38)
+bg_col_trt  := rl.ColorFromHSV(108, 0.77, 0.24)
+card_labels := map[Card_Value]string{
+	.Ace   ="A",
+	.Two   ="2",
+	.Three ="3",
+	.Four  ="4",
+	.Five  ="5",
+	.Six   ="6",
+	.Seven ="7",
+	.Eight ="8",
+	.Nine  ="9",
+	.Ten   ="10",
+	.Jack  ="J",
+	.Queen ="Q",
+	.King  ="K",
+}
 
+card_font:   rl.Font
+card_font_size: i32 = 120
 club_tex:    rl.Texture2D
 diamond_tex: rl.Texture2D
 heart_tex:   rl.Texture2D
 spade_tex:   rl.Texture2D
-
 
 // procedures
 main :: proc() {
@@ -67,7 +99,11 @@ main :: proc() {
 }
 
 close :: proc() {
+	rl.UnloadFont(card_font)
 	rl.UnloadTexture(club_tex)
+	rl.UnloadTexture(diamond_tex)
+	rl.UnloadTexture(heart_tex)
+	rl.UnloadTexture(spade_tex)
 }
 
 do_game :: proc() {
@@ -77,31 +113,57 @@ do_game :: proc() {
 	card_size := rl.Vector2{130, 200}
 
 	pos := rl.Vector2{sw/4, sh/4}
-	draw_card(pos, card_size, .Clubs)
+	draw_card(pos, card_size, .Six, .Clubs)
 	pos.x = pos.x+card_size.x+30
-	draw_card(pos, card_size, .Diamonds)
+	draw_card(pos, card_size, .Seven, .Diamonds)
 	pos.x = pos.x+card_size.x+30
-	draw_card(pos, card_size, .Hearts)
+	draw_card(pos, card_size, .Eight, .Hearts)
 	pos.x = pos.x+card_size.x+30
-	draw_card(pos, card_size, .Spades)
+	draw_card(pos, card_size, .Nine, .Spades)
 }
 
-draw_card :: proc(pos: rl.Vector2, card_size: rl.Vector2, suit: Card_Suit) {
+draw_card :: proc(pos: rl.Vector2, card_size: rl.Vector2, value: Card_Value, suit: Card_Suit) {
 	suit_scale: f32 = 0.29
-	card_bg_col := rl.ColorFromHSV(55, 0.06, 0.91)
+	card_bg_col := rl.ColorFromHSV(55, 0.10, 0.88)
 	card_shadow := rl.ColorAlpha(rl.ColorFromHSV(102, 0.6, 0.15), 0.3)
 
-	rl.DrawRectangleRounded(rl.Rectangle{pos.x+2, pos.y+4, card_size.x, card_size.y}, 0.13, 32, card_shadow)
+	rl.DrawRectangleRounded(rl.Rectangle{pos.x+4, pos.y+6, card_size.x, card_size.y}, 0.13, 32, card_shadow)
 	rl.DrawRectangleRounded(rl.Rectangle{pos.x, pos.y, card_size.x, card_size.y}, 0.13, 32, card_bg_col)
 
-	// top left
+	// top left suit
 	switch suit {
 		case .Clubs:    rl.DrawTextureEx(club_tex,    rl.Vector2{pos.x+card_size.x*0.03, pos.y+card_size.y*0.03}, 0, suit_scale/2, rl.WHITE)
 		case .Diamonds: rl.DrawTextureEx(diamond_tex, rl.Vector2{pos.x+card_size.x*0.03, pos.y+card_size.y*0.03}, 0, suit_scale/2, rl.WHITE)
 		case .Hearts:   rl.DrawTextureEx(heart_tex,   rl.Vector2{pos.x+card_size.x*0.03, pos.y+card_size.y*0.03}, 0, suit_scale/2, rl.WHITE)
 		case .Spades:   rl.DrawTextureEx(spade_tex,   rl.Vector2{pos.x+card_size.x*0.03, pos.y+card_size.y*0.03}, 0, suit_scale/2, rl.WHITE)
 	}
-	// bottom right
+	label_offset := rl.Vector2{card_size.x*0.3, card_size.y*0.15}
+	#partial switch value {
+		case .Ace:   label_offset = rl.Vector2{card_size.x*0.24, label_offset.y}
+		case .Queen: label_offset = rl.Vector2{card_size.x*0.20, card_size.y*0.11}
+		case .King:  label_offset = rl.Vector2{card_size.x*0.27, label_offset.y}
+		case .Ten:   label_offset = rl.Vector2{card_size.x*0.11, label_offset.y}
+	}
+	if suit == .Clubs || suit ==.Spades {
+		rl.DrawTextEx(
+			card_font,
+			strings.clone_to_cstring(card_labels[value], context.temp_allocator),
+			rl.Vector2{pos.x+label_offset.x, pos.y+label_offset.y},
+			f32(card_font_size),
+			1,
+			rl.BLACK
+		)
+	} else {
+		rl.DrawTextEx(
+			card_font,
+			strings.clone_to_cstring(card_labels[value], context.temp_allocator),
+			rl.Vector2{pos.x+label_offset.x, pos.y+label_offset.y},
+			f32(card_font_size),
+			1,
+			rl.RED
+		)
+	}
+	// bottom right suit
 	switch suit {
 		case .Clubs:    rl.DrawTextureEx(club_tex,    rl.Vector2{pos.x+card_size.x*0.4, pos.y+card_size.y*0.65}, 0, suit_scale, rl.WHITE)
 		case .Diamonds: rl.DrawTextureEx(diamond_tex, rl.Vector2{pos.x+card_size.x*0.4, pos.y+card_size.y*0.65}, 0, suit_scale, rl.WHITE)
@@ -133,4 +195,7 @@ init :: proc() {
 	suit_img  = rl.LoadImage(strings.clone_to_cstring(suit_path, context.temp_allocator))
 	spade_tex = rl.LoadTextureFromImage(suit_img)
 	rl.UnloadImage(suit_img)
+
+    font_path := filepath.join([]string{src_dir, "resources", "fonts", "Kingthings_Foundation.ttf"}, context.temp_allocator)
+	card_font  = rl.LoadFontEx(strings.clone_to_cstring(font_path, context.temp_allocator), card_font_size, nil, 0)
 }
