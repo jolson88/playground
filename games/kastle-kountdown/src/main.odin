@@ -8,26 +8,12 @@ import "qv"
 import rl "vendor:raylib"
 
 // structs
-Card_Suit :: enum {
-	Clubs,
-	Diamonds,
-	Hearts,
-	Spades,
-}
+Card_Suit :: enum { Clubs, Diamonds, Hearts, Spades, }
 
 Card_Value :: enum {
-	Ace,
-	Two,
-	Three,
-	Four,
-	Five,
-	Six,
-	Seven,
-	Eight,
-	Nine,
-	Ten,
-	Jack,
-	Queen,
+	Ace,  Two, Three, Four,
+	Five, Six, Seven, Eight,
+	Nine, Ten, Jack,  Queen,
 	King,
 }
 
@@ -38,19 +24,10 @@ bg_col_pri  := rl.ColorFromHSV(132, 0.53, 0.59)
 bg_col_sec  := rl.ColorFromHSV(121, 0.56, 0.38)
 bg_col_trt  := rl.ColorFromHSV(108, 0.77, 0.24)
 card_labels := map[Card_Value]string{
-	.Ace   ="A",
-	.Two   ="2",
-	.Three ="3",
-	.Four  ="4",
-	.Five  ="5",
-	.Six   ="6",
-	.Seven ="7",
-	.Eight ="8",
-	.Nine  ="9",
-	.Ten   ="10",
-	.Jack  ="J",
-	.Queen ="Q",
-	.King  ="K",
+	.Ace  = "A", .Two = "2",  .Three = "3", .Four  = "4",
+	.Five = "5", .Six = "6",  .Seven = "7", .Eight = "8",
+	.Nine = "9", .Ten = "10", .Jack  = "J", .Queen = "Q",
+	.King = "K",
 }
 
 card_font:   rl.Font
@@ -113,13 +90,13 @@ do_game :: proc() {
 	card_size := rl.Vector2{130, 200}
 
 	pos := rl.Vector2{sw/4, sh/4}
-	draw_card(pos, card_size, .Six, .Clubs)
+	draw_card(pos, card_size, .Ace, .Clubs)
 	pos.x = pos.x+card_size.x+30
 	draw_card(pos, card_size, .Seven, .Diamonds)
 	pos.x = pos.x+card_size.x+30
-	draw_card(pos, card_size, .Eight, .Hearts)
+	draw_card(pos, card_size, .Ten, .Hearts)
 	pos.x = pos.x+card_size.x+30
-	draw_card(pos, card_size, .Nine, .Spades)
+	draw_card(pos, card_size, .Queen, .Spades)
 }
 
 draw_card :: proc(pos: rl.Vector2, card_size: rl.Vector2, value: Card_Value, suit: Card_Suit) {
@@ -160,7 +137,7 @@ draw_card :: proc(pos: rl.Vector2, card_size: rl.Vector2, value: Card_Value, sui
 			rl.Vector2{pos.x+label_offset.x, pos.y+label_offset.y},
 			f32(card_font_size),
 			1,
-			rl.RED
+			rl.ColorBrightness(rl.RED, -0.2)
 		)
 	}
 	// bottom right suit
