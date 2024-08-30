@@ -11,6 +11,9 @@ import rl "vendor:raylib"
 // variables
 sw, sh: f32
 
+bg_col_pri := rl.ColorFromHSV(132, 0.53, 0.59)
+bg_col_sec := rl.ColorFromHSV(121, 0.56, 0.38)
+bg_col_trt := rl.ColorFromHSV(108, 0.77, 0.24)
 
 // procedures
 main :: proc() {
@@ -49,6 +52,7 @@ main :: proc() {
 
 do_game :: proc() {
 	rl.ClearBackground(rl.BLACK)
+	rl.DrawRectangleGradientEx(rl.Rectangle{0, 0, sw, sh}, bg_col_pri, bg_col_sec, bg_col_trt, bg_col_pri)
 }
 
 init :: proc() {
