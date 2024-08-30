@@ -92,10 +92,13 @@ do_game :: proc() {
 	pos := rl.Vector2{sw/4, sh/4}
 	draw_card(pos, card_width, .Ace, .Clubs)
 	pos.x = pos.x+card_width+30
+	card_width = 110
 	draw_card(pos, card_width, .Seven, .Diamonds)
 	pos.x = pos.x+card_width+30
+	card_width = 90
 	draw_card(pos, card_width, .Ten, .Hearts)
 	pos.x = pos.x+card_width+30
+	card_width = 70
 	draw_card(pos, card_width, .Queen, .Spades)
 }
 
