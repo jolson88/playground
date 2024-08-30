@@ -105,8 +105,11 @@ do_game :: proc() {
 draw_card :: proc(pos: rl.Vector2, card_width: f32, value: Card_Value, suit: Card_Suit) {
 	proto_card_size  := rl.Vector2{130, 200}
 	aspect_ratio: f32 = proto_card_size.x / proto_card_size.y
+	scale_factor: f32 = card_width / proto_card_size.x
 	card_height: f32  = card_width / aspect_ratio
-	suit_scale: f32   = 0.29
+	card_size        := rl.Vector2{card_width, card_height}
+	suit_scale: f32   = 0.29 * scale_factor
+
 	card_bg_col := rl.ColorFromHSV(55, 0.10, 0.88)
 	card_shadow := rl.ColorAlpha(rl.ColorFromHSV(102, 0.6, 0.15), 0.3)
 
@@ -114,45 +117,32 @@ draw_card :: proc(pos: rl.Vector2, card_width: f32, value: Card_Value, suit: Car
 	rl.DrawRectangleRounded(rl.Rectangle{pos.x, pos.y, card_width, card_height}, 0.13, 32, card_bg_col)
 
 	// top left suit
-	switch suit {
-		case .Clubs:    rl.DrawTextureEx(club_tex,    rl.Vector2{pos.x+card_width*0.03, pos.y+card_height*0.03}, 0, suit_scale/2, rl.WHITE)
-		case .Diamonds: rl.DrawTextureEx(diamond_tex, rl.Vector2{pos.x+card_width*0.03, pos.y+card_height*0.03}, 0, suit_scale/2, rl.WHITE)
-		case .Hearts:   rl.DrawTextureEx(heart_tex,   rl.Vector2{pos.x+card_width*0.03, pos.y+card_height*0.03}, 0, suit_scale/2, rl.WHITE)
-		case .Spades:   rl.DrawTextureEx(spade_tex,   rl.Vector2{pos.x+card_width*0.03, pos.y+card_height*0.03}, 0, suit_scale/2, rl.WHITE)
+	tex    := club_tex
+	#partial switch suit {
+		case .Diamonds: tex = diamond_tex
+		case .Hearts:   tex = heart_tex
+		case .Spades:   tex = spade_tex
 	}
-	label_offset := rl.Vector2{card_width*0.3, card_height*0.15}
-	#partial switch value {
-		case .Ace:   label_offset = rl.Vector2{card_width*0.24, label_offset.y}
-		case .Queen: label_offset = rl.Vector2{card_width*0.20, card_height*0.11}
-		case .King:  label_offset = rl.Vector2{card_width*0.27, label_offset.y}
-		case .Ten:   label_offset = rl.Vector2{card_width*0.11, label_offset.y}
-	}
+	offset := rl.Vector2{5*scale_factor, 5*scale_factor}
+	rl.DrawTextureEx(tex, pos + offset, 0, suit_scale/2, rl.WHITE)
+
+	// center value
+	font_size  := f32(card_font_size) * scale_factor
+	label_c    := strings.clone_to_cstring(card_labels[value], context.temp_allocator)
+	label_size := rl.MeasureTextEx(card_font, label_c, font_size, 0)
+	offset      = rl.Vector2{card_width/2-label_size.x/2, card_height/2-label_size.y/2-12*scale_factor}
 	if suit == .Clubs || suit ==.Spades {
-		rl.DrawTextEx(
-			card_font,
-			strings.clone_to_cstring(card_labels[value], context.temp_allocator),
-			rl.Vector2{pos.x+label_offset.x, pos.y+label_offset.y},
-			f32(card_font_size),
-			1,
-			rl.BLACK
-		)
+		rl.DrawTextEx(card_font, label_c, pos + offset, font_size, 0, rl.BLACK)
 	} else {
-		rl.DrawTextEx(
-			card_font,
-			strings.clone_to_cstring(card_labels[value], context.temp_allocator),
-			rl.Vector2{pos.x+label_offset.x, pos.y+label_offset.y},
-			f32(card_font_size),
-			1,
-			rl.ColorBrightness(rl.RED, -0.2)
-		)
+		rl.DrawTextEx(card_font, label_c, pos + offset, font_size, 0, rl.ColorBrightness(rl.RED, -0.2))
 	}
+
 	// bottom right suit
-	switch suit {
-		case .Clubs:    rl.DrawTextureEx(club_tex,    rl.Vector2{pos.x+card_width*0.4, pos.y+card_height*0.65}, 0, suit_scale, rl.WHITE)
-		case .Diamonds: rl.DrawTextureEx(diamond_tex, rl.Vector2{pos.x+card_width*0.4, pos.y+card_height*0.65}, 0, suit_scale, rl.WHITE)
-		case .Hearts:   rl.DrawTextureEx(heart_tex,   rl.Vector2{pos.x+card_width*0.4, pos.y+card_height*0.65}, 0, suit_scale, rl.WHITE)
-		case .Spades:   rl.DrawTextureEx(spade_tex,   rl.Vector2{pos.x+card_width*0.4, pos.y+card_height*0.65}, 0, suit_scale, rl.WHITE)
+	offset = rl.Vector2{
+		f32(tex.width)  * suit_scale,
+		f32(tex.height) * suit_scale
 	}
+	rl.DrawTextureEx(tex, pos + card_size - offset, 0, suit_scale, rl.WHITE)
 }
 
 init :: proc() {
