@@ -10,9 +10,12 @@ import rl "vendor:raylib"
 CARD_FONT_SIZE :: 120
 
 Card :: struct {
-	suit: Card_Suit,
+	suit:  Card_Suit,
 	value: Card_Value,
-	pos: rl.Vector2,
+	pos:   rl.Vector2,
+	size:  rl.Vector2,
+	
+	is_active, is_hovering: bool,
 }
 
 Card_Suit  :: enum { Clubs, Diamonds, Hearts, Spades }
@@ -32,6 +35,7 @@ Game_State :: struct {
 	spade_tex:   rl.Texture2D,
 
 	gui: qv.Gui_State,
+	cards: [4]Card,
 	card_1: Card,
 	card_2: Card,
 	card_3: Card,
@@ -46,7 +50,6 @@ card_labels := map[Card_Value]string{
 	.Nine = "9", .Ten = "10", .Jack  = "J", .Queen = "Q",
 	.King = "K",
 }
-card_width: f32 = 130
 game_state: Game_State
 proto_card_size := rl.Vector2{130, 200}
 
@@ -75,9 +78,9 @@ main :: proc() {
 	}
 
 	qv.create_window("Kastle Kountdown", .Seven_Twenty_P)	
-
 	init()
 	defer close()
+
     for !rl.WindowShouldClose() {
 		free_all(context.temp_allocator)
 
@@ -100,42 +103,82 @@ close :: proc() {
 }
 
 do_game :: proc() {
-	bg_col_pri  := rl.ColorFromHSV(132, 0.53, 0.59)
-	bg_col_sec  := rl.ColorFromHSV(121, 0.56, 0.38)
-	bg_col_trt  := rl.ColorFromHSV(108, 0.77, 0.24)
+	bg_col_pri := rl.ColorFromHSV(132, 0.53, 0.59)
+	bg_col_sec := rl.ColorFromHSV(121, 0.56, 0.38)
+	bg_col_trt := rl.ColorFromHSV(108, 0.77, 0.24)
 
+	// calculate ui
+	for &c in game_state.cards {
+		res := qv.update_control(&game_state.gui, qv.Gui_Id(uintptr(&c)), rl.Rectangle{c.pos.x, c.pos.y, c.size.x, c.size.y})
+		if .Hover_In in res {
+			c.is_hovering = true
+		}
+		if .Hover_Out in res {
+			c.is_hovering = false
+		}
+		if .Active_In in res {
+			c.is_active = true
+		}
+		if .Active_Out in res {
+			c.is_active = false
+		}
+		if .Dragging in res {
+			c.pos += rl.Vector2{
+				game_state.gui.mouse_pos.x - game_state.gui.last_mouse_pos.x,
+				game_state.gui.mouse_pos.y - game_state.gui.last_mouse_pos.y,
+			}
+		}
+
+	}
+
+	// render graphics
 	rl.ClearBackground(rl.BLACK)
 	rl.DrawRectangleGradientEx(rl.Rectangle{0, 0, sw, sh}, bg_col_pri, bg_col_sec, bg_col_trt, bg_col_pri)
 
-	draw_card(&game_state.card_1, card_width)
-	draw_card(&game_state.card_2, card_width)
-	draw_card(&game_state.card_3, card_width)
-	draw_card(&game_state.card_4, card_width)
+	// save active render for last (so active card can be visually dragged over other cards)
+	active_card: Maybe(^Card)
+	for &c in game_state.cards {
+		if c.is_active {
+			active_card = &c
+			continue
+		}
+		draw_card(&c)
+	}
+	ac, ok := active_card.?
+	if ok do draw_card(ac)
 }
 
-draw_card :: proc(card: ^Card, card_width: f32) {
+draw_card :: proc(card: ^Card) {
 	aspect_ratio: f32 = proto_card_size.x / proto_card_size.y
-	scale_factor: f32 = card_width / proto_card_size.x
-	card_height: f32  = card_width / aspect_ratio
-	card_size        := rl.Vector2{card_width, card_height}
-	suit_scale: f32   = 0.29 * scale_factor
+	scale_factor: f32 = card.size.x / proto_card_size.x
+	card_height:  f32 = card.size.x / aspect_ratio
+	card_size        := rl.Vector2{card.size.x, card_height}
+	suit_scale:   f32 = 0.29 * scale_factor
 
 	card_shadow := rl.ColorAlpha(rl.ColorFromHSV(102, 0.6, 0.15), 0.3)
 	card_bg_col := rl.ColorFromHSV(42, 0.10, 0.88)
-	card_bg_hov := rl.ColorFromHSV(38, 0.24, 0.86)
-	card_bg_act := rl.ColorFromHSV(35, 0.33, 0.84)
+	card_bg_hov := rl.ColorFromHSV(38, 0.15, 0.86)
+	card_bg_act := rl.ColorFromHSV(35, 0.22, 0.84)
 
-	card_col := card_bg_col
-	res := qv.update_control(&game_state.gui, qv.Gui_Id(uintptr(card)), rl.Rectangle{card.pos.x, card.pos.y, card_size.x, card_size.y})
-	if .Hover in res {
-		card_col = card_bg_hov
-	}
-	if .Active in res {
-		card_col = card_bg_act
-	}
-
-	rl.DrawRectangleRounded(rl.Rectangle{card.pos.x+4, card.pos.y+6, card_width, card_height}, 0.13, 32, card_shadow)
-	rl.DrawRectangleRounded(rl.Rectangle{card.pos.x,   card.pos.y,   card_width, card_height}, 0.13, 32, card_col)
+	shadow_offset := rl.Vector2{4, 6}
+	card_col      := card_bg_col
+	if card.is_hovering { card_col = card_bg_hov }
+	if card.is_active   { card_col = card_bg_act; shadow_offset = rl.Vector2{8, 12} }
+	rl.DrawRectangleRounded(
+		rl.Rectangle{
+			card.pos.x+shadow_offset.x,
+			card.pos.y+shadow_offset.y,
+			card.size.x,
+			card_height
+		},
+		0.13, 32,
+		card_shadow
+	)
+	rl.DrawRectangleRounded(
+		rl.Rectangle{card.pos.x, card.pos.y, card.size.x, card_height},
+		0.13, 32,
+		card_col
+	)
 
 	// top left suit
 	tex := game_state.club_tex
@@ -151,7 +194,7 @@ draw_card :: proc(card: ^Card, card_width: f32) {
 	font_size  := f32(CARD_FONT_SIZE) * scale_factor
 	label_c    := strings.clone_to_cstring(card_labels[card.value], context.temp_allocator)
 	label_size := rl.MeasureTextEx(game_state.card_font, label_c, font_size, 0)
-	offset      = rl.Vector2{card_width/2-label_size.x/2, card_height/2-label_size.y/2-12*scale_factor}
+	offset      = rl.Vector2{card.size.x/2-label_size.x/2, card_height/2-label_size.y/2-12*scale_factor}
 	if card.suit == .Clubs || card.suit == .Spades {
 		rl.DrawTextEx(game_state.card_font, label_c, card.pos + offset, font_size, 0, rl.BLACK)
 	} else {
@@ -197,20 +240,27 @@ init :: proc() {
 		suit  = .Clubs,
 		value = .Ace,
 		pos   = rl.Vector2{sw/4, sh/4},
+		size  = proto_card_size,
 	}
 	game_state.card_2 = Card{
 		suit  = .Diamonds,
 		value = .Seven,
-		pos   = rl.Vector2{game_state.card_1.pos.x+card_width+30, game_state.card_1.pos.y},
+		pos   = rl.Vector2{game_state.card_1.pos.x+proto_card_size.x+30, game_state.card_1.pos.y},
+		size  = proto_card_size,
 	}
 	game_state.card_3 = Card{
 		suit  = .Hearts,
 		value = .Ten,
-		pos   = rl.Vector2{game_state.card_2.pos.x+card_width+30, game_state.card_2.pos.y},
+		pos   = rl.Vector2{game_state.card_2.pos.x+proto_card_size.x+30, game_state.card_2.pos.y},
+		size  = proto_card_size,
 	}
 	game_state.card_4 = Card{
 		suit  = .Spades,
 		value = .Queen,
-		pos   = rl.Vector2{game_state.card_3.pos.x+card_width+30, game_state.card_3.pos.y},
+		pos   = rl.Vector2{game_state.card_3.pos.x+proto_card_size.x+30, game_state.card_3.pos.y},
+		size  = proto_card_size,
+	}
+	game_state.cards = [4]Card{
+		game_state.card_1, game_state.card_2, game_state.card_3, game_state.card_4,
 	}
 }
