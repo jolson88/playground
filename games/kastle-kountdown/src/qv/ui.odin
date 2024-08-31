@@ -88,11 +88,15 @@ update_control :: proc(gui: ^Gui_State, id: Gui_Id, rect: rl.Rectangle) -> (res:
     hovering := rl.CheckCollisionPointRec(gui.mouse_pos, rect)
 
     // we just started being hovered over
-    // ignore if another card is active as this is part of a drag operation
-    if hovering && gui.hover_id != id && !(gui.active_id != 0 && gui.active_id != id) {
-        // TODO: Move the check for a different active_id into here and register .Drag_Over instead of .Hover_In
-        set_hover(gui, id)
-        res += {.Hover_In}
+    if hovering && gui.hover_id != id {
+        if gui.active_id != 0 && gui.active_id != id {
+            res += {.Drag_Over}
+        } else {
+            if gui.hover_id == 0 {
+                set_hover(gui, id)
+                res += {.Hover_In}
+            }
+        }
     }
 
     // we're being hovered over

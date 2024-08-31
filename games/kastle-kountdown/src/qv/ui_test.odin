@@ -129,10 +129,6 @@ drag_over_tests :: proc(t: ^testing.T) {
     }
     res := update_control(&gui, id, rl.Rectangle{0, 0, 10, 10})
     expect_value(t, res, Control_Result_Set{.Drag_Over})
-    expect_value(t, gui.active_id, id)
-    expect_value(t, gui.hover_id, id)
-    expect_value(t, gui.updated_active, true)
-    expect_value(t, gui.updated_hover, true)
 }
 
 @(test)
