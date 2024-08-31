@@ -6,7 +6,7 @@ Control_Result :: enum u32 {
     Active, Active_In, Active_Out,
 	Hover, Hover_In, Hover_Out,
     Click,
-    Dragging, Drag_Start, Drag_End,
+    Dragging, Drag_Start, Drag_End, Drag_Over,
 }
 Control_Result_Set :: distinct bit_set[Control_Result; u32]
 

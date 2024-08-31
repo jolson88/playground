@@ -114,6 +114,28 @@ dragging_tests :: proc(t: ^testing.T) {
 }
 
 @(test)
+drag_over_tests :: proc(t: ^testing.T) {
+    using testing
+
+    // mouse down, being hovered over, but not active
+    id  := Gui_Id(1)
+    gui := Gui_State{
+        active_id = 2,
+        hover_id  = 2,
+        last_active_id = 2,
+        last_hover_id  = 2,
+        mouse_pos = rl.Vector2{5, 5},
+        mouse_down = true,
+    }
+    res := update_control(&gui, id, rl.Rectangle{0, 0, 10, 10})
+    expect_value(t, res, Control_Result_Set{.Drag_Over})
+    expect_value(t, gui.active_id, id)
+    expect_value(t, gui.hover_id, id)
+    expect_value(t, gui.updated_active, true)
+    expect_value(t, gui.updated_hover, true)
+}
+
+@(test)
 stop_hovering_tests :: proc(t: ^testing.T) {
     using testing
 
