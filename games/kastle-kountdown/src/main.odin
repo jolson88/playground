@@ -77,6 +77,9 @@ main :: proc() {
 
 		qv.begin()
 		defer qv.present()
+
+		qv.gui_start(&game_state.gui)
+		defer qv.gui_end(&game_state.gui)
 		
 		do_game()	
 	}
