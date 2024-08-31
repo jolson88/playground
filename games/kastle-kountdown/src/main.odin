@@ -32,6 +32,10 @@ Game_State :: struct {
 	spade_tex:   rl.Texture2D,
 
 	gui: qv.Gui_State,
+	card_1: Card,
+	card_2: Card,
+	card_3: Card,
+	card_4: Card,
 }
 
 // variables
@@ -42,7 +46,9 @@ card_labels := map[Card_Value]string{
 	.Nine = "9", .Ten = "10", .Jack  = "J", .Queen = "Q",
 	.King = "K",
 }
+card_width: f32 = 130
 game_state: Game_State
+proto_card_size := rl.Vector2{130, 200}
 
 // procedures
 main :: proc() {
@@ -101,54 +107,55 @@ do_game :: proc() {
 	rl.ClearBackground(rl.BLACK)
 	rl.DrawRectangleGradientEx(rl.Rectangle{0, 0, sw, sh}, bg_col_pri, bg_col_sec, bg_col_trt, bg_col_pri)
 
-	card_width: f32 = 130
-
-	pos := rl.Vector2{sw/4, sh/4}
-	draw_card(pos, card_width, .Ace, .Clubs)
-	pos.x = pos.x+card_width+30
-	card_width = 110
-	draw_card(pos, card_width, .Seven, .Diamonds)
-	pos.x = pos.x+card_width+30
-	card_width = 90
-	draw_card(pos, card_width, .Ten, .Hearts)
-	pos.x = pos.x+card_width+30
-	card_width = 70
-	draw_card(pos, card_width, .Queen, .Spades)
+	draw_card(&game_state.card_1, card_width)
+	draw_card(&game_state.card_2, card_width)
+	draw_card(&game_state.card_3, card_width)
+	draw_card(&game_state.card_4, card_width)
 }
 
-draw_card :: proc(pos: rl.Vector2, card_width: f32, value: Card_Value, suit: Card_Suit) {
-	card_bg_col := rl.ColorFromHSV(55, 0.10, 0.88)
-	card_shadow := rl.ColorAlpha(rl.ColorFromHSV(102, 0.6, 0.15), 0.3)
-
-	proto_card_size  := rl.Vector2{130, 200}
+draw_card :: proc(card: ^Card, card_width: f32) {
 	aspect_ratio: f32 = proto_card_size.x / proto_card_size.y
 	scale_factor: f32 = card_width / proto_card_size.x
 	card_height: f32  = card_width / aspect_ratio
 	card_size        := rl.Vector2{card_width, card_height}
 	suit_scale: f32   = 0.29 * scale_factor
 
-	rl.DrawRectangleRounded(rl.Rectangle{pos.x+4, pos.y+6, card_width, card_height}, 0.13, 32, card_shadow)
-	rl.DrawRectangleRounded(rl.Rectangle{pos.x,   pos.y,   card_width, card_height}, 0.13, 32, card_bg_col)
+	card_shadow := rl.ColorAlpha(rl.ColorFromHSV(102, 0.6, 0.15), 0.3)
+	card_bg_col := rl.ColorFromHSV(42, 0.10, 0.88)
+	card_bg_hov := rl.ColorFromHSV(38, 0.24, 0.86)
+	card_bg_act := rl.ColorFromHSV(35, 0.33, 0.84)
+
+	card_col := card_bg_col
+	res := qv.update_control(&game_state.gui, qv.Gui_Id(uintptr(card)), rl.Rectangle{card.pos.x, card.pos.y, card_size.x, card_size.y})
+	if .Hover in res {
+		card_col = card_bg_hov
+	}
+	if .Active in res {
+		card_col = card_bg_act
+	}
+
+	rl.DrawRectangleRounded(rl.Rectangle{card.pos.x+4, card.pos.y+6, card_width, card_height}, 0.13, 32, card_shadow)
+	rl.DrawRectangleRounded(rl.Rectangle{card.pos.x,   card.pos.y,   card_width, card_height}, 0.13, 32, card_col)
 
 	// top left suit
 	tex := game_state.club_tex
-	#partial switch suit {
+	#partial switch card.suit {
 		case .Diamonds: tex = game_state.diamond_tex
 		case .Hearts:   tex = game_state.heart_tex
 		case .Spades:   tex = game_state.spade_tex
 	}
 	offset := rl.Vector2{5*scale_factor, 5*scale_factor}
-	rl.DrawTextureEx(tex, pos + offset, 0, suit_scale/2, rl.WHITE)
+	rl.DrawTextureEx(tex, card.pos + offset, 0, suit_scale/2, rl.WHITE)
 
 	// center value
 	font_size  := f32(CARD_FONT_SIZE) * scale_factor
-	label_c    := strings.clone_to_cstring(card_labels[value], context.temp_allocator)
+	label_c    := strings.clone_to_cstring(card_labels[card.value], context.temp_allocator)
 	label_size := rl.MeasureTextEx(game_state.card_font, label_c, font_size, 0)
 	offset      = rl.Vector2{card_width/2-label_size.x/2, card_height/2-label_size.y/2-12*scale_factor}
-	if suit == .Clubs || suit ==.Spades {
-		rl.DrawTextEx(game_state.card_font, label_c, pos + offset, font_size, 0, rl.BLACK)
+	if card.suit == .Clubs || card.suit == .Spades {
+		rl.DrawTextEx(game_state.card_font, label_c, card.pos + offset, font_size, 0, rl.BLACK)
 	} else {
-		rl.DrawTextEx(game_state.card_font, label_c, pos + offset, font_size, 0, rl.ColorBrightness(rl.RED, -0.2))
+		rl.DrawTextEx(game_state.card_font, label_c, card.pos + offset, font_size, 0, rl.ColorBrightness(rl.RED, -0.2))
 	}
 
 	// bottom right suit
@@ -156,7 +163,7 @@ draw_card :: proc(pos: rl.Vector2, card_width: f32, value: Card_Value, suit: Car
 		f32(tex.width)  * suit_scale,
 		f32(tex.height) * suit_scale
 	}
-	rl.DrawTextureEx(tex, pos + card_size - offset, 0, suit_scale, rl.WHITE)
+	rl.DrawTextureEx(tex, card.pos + card_size - offset, 0, suit_scale, rl.WHITE)
 }
 
 init :: proc() {
@@ -185,4 +192,25 @@ init :: proc() {
 
     font_path := filepath.join([]string{src_dir, "resources", "fonts", "Kingthings_Foundation.ttf"}, context.temp_allocator)
 	game_state.card_font = rl.LoadFontEx(strings.clone_to_cstring(font_path, context.temp_allocator), CARD_FONT_SIZE, nil, 0)
+
+	game_state.card_1 = Card{
+		suit  = .Clubs,
+		value = .Ace,
+		pos   = rl.Vector2{sw/4, sh/4},
+	}
+	game_state.card_2 = Card{
+		suit  = .Diamonds,
+		value = .Seven,
+		pos   = rl.Vector2{game_state.card_1.pos.x+card_width+30, game_state.card_1.pos.y},
+	}
+	game_state.card_3 = Card{
+		suit  = .Hearts,
+		value = .Ten,
+		pos   = rl.Vector2{game_state.card_2.pos.x+card_width+30, game_state.card_2.pos.y},
+	}
+	game_state.card_4 = Card{
+		suit  = .Spades,
+		value = .Queen,
+		pos   = rl.Vector2{game_state.card_3.pos.x+card_width+30, game_state.card_3.pos.y},
+	}
 }
