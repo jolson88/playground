@@ -71,11 +71,11 @@ become_inactive_tests :: proc(t: ^testing.T) {
 }
 
 @(test)
-dragging_tests :: proc(t: ^testing.T) {
+click_tests :: proc(t: ^testing.T) {
     using testing
 
     // mouse pressed while hovering
-    id := Gui_Id(1)
+    id  := Gui_Id(1)
     gui := Gui_State{
         active_id = id,
         hover_id  = id,
@@ -86,15 +86,20 @@ dragging_tests :: proc(t: ^testing.T) {
         mouse_pressed = true,
     }
     res := update_control(&gui, id, rl.Rectangle{0, 0, 10, 10})
-    expect_value(t, res, Control_Result_Set{.Active, .Click, .Hover, .Dragging})
+    expect_value(t, res, Control_Result_Set{.Active, .Click, .Hover})
     expect_value(t, gui.active_id, id)
     expect_value(t, gui.hover_id, id)
     expect_value(t, gui.updated_active, true)
     expect_value(t, gui.updated_hover, true)
+}
+
+@(test)
+dragging_tests :: proc(t: ^testing.T) {
+    using testing
 
     // mouse down while still hovering
-    id = Gui_Id(1)
-    gui = Gui_State{
+    id  := Gui_Id(1)
+    gui := Gui_State{
         active_id = id,
         hover_id  = id,
         last_active_id = id,
@@ -102,8 +107,8 @@ dragging_tests :: proc(t: ^testing.T) {
         mouse_pos = rl.Vector2{5, 5},
         mouse_down = true,
     }
-    res = update_control(&gui, id, rl.Rectangle{0, 0, 10, 10})
-    expect_value(t, res, Control_Result_Set{.Active, .Hover, .Dragging})
+    res := update_control(&gui, id, rl.Rectangle{0, 0, 10, 10})
+    expect_value(t, res, Control_Result_Set{.Active, .Hover, .Drag_Start})
     expect_value(t, gui.active_id, id)
     expect_value(t, gui.hover_id, id)
     expect_value(t, gui.updated_active, true)

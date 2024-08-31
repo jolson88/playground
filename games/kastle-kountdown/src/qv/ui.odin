@@ -6,7 +6,7 @@ Control_Result :: enum u32 {
     Active, Active_In, Active_Out,
 	Hover, Hover_In, Hover_Out,
     Click,
-    Dragging,
+    Dragging, Drag_Start, Drag_End,
 }
 Control_Result_Set :: distinct bit_set[Control_Result; u32]
 
@@ -14,8 +14,9 @@ Gui_Id :: distinct u64
 
 Gui_State :: struct {
     active_id, last_active_id: Gui_Id,
-    hover_id, last_hover_id: Gui_Id,
-    updated_active, updated_hover: bool,
+    drag_id,   last_drag_id:   Gui_Id,
+    hover_id,  last_hover_id:  Gui_Id,
+    updated_active, updated_drag, updated_hover: bool,
 
     current_time: f64,
     delta_time: f64,
@@ -32,6 +33,11 @@ gui_end :: proc(gui: ^Gui_State) {
 		gui.active_id = 0
 	}
 	gui.updated_active = false
+
+	if !gui.updated_drag {
+		gui.drag_id = 0
+	}
+	gui.updated_drag = false
 
 	if !gui.updated_hover {
 		gui.hover_id = 0
@@ -66,6 +72,13 @@ set_active :: proc(gui: ^Gui_State, id: Gui_Id) {
     gui.active_id = id
     gui.updated_active = true
 }
+
+set_drag :: proc(gui: ^Gui_State, id: Gui_Id) {
+    gui.drag_id = id
+    gui.updated_active = true
+    gui.updated_drag   = true
+}
+
 set_hover :: proc(gui: ^Gui_State, id: Gui_Id) {
     gui.hover_id = id
     gui.updated_hover = true
@@ -82,12 +95,19 @@ update_control :: proc(gui: ^Gui_State, id: Gui_Id, rect: rl.Rectangle) -> (res:
 
     // we're still active
     if gui.active_id == id {
+        gui.updated_active = true
         if (gui.mouse_pressed && !hovering) || !gui.mouse_down {
             set_active(gui, 0)
         } else {
-            if gui.mouse_pressed || gui.mouse_down {
-                gui.updated_active = true
+            if gui.mouse_down && gui.drag_id == id {
+                gui.updated_drag   = true
                 res += {.Dragging}
+            }
+            if gui.mouse_down && gui.drag_id != id && !gui.mouse_pressed {
+                // we ignore mouse_pressed because initial mouse_press should register a
+                // .Click res and .Drag_Start should start on following frame
+                set_drag(gui, id)
+                res += {.Drag_Start}
             }
         }
     }
