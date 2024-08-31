@@ -77,16 +77,14 @@ click_tests :: proc(t: ^testing.T) {
     // mouse pressed while hovering
     id  := Gui_Id(1)
     gui := Gui_State{
-        active_id = id,
         hover_id  = id,
-        last_active_id = id,
         last_hover_id  = id,
         mouse_pos = rl.Vector2{5, 5},
         mouse_down = true,
         mouse_pressed = true,
     }
     res := update_control(&gui, id, rl.Rectangle{0, 0, 10, 10})
-    expect_value(t, res, Control_Result_Set{.Active, .Click, .Hover})
+    expect_value(t, res, Control_Result_Set{.Active, .Active_In, .Click, .Hover})
     expect_value(t, gui.active_id, id)
     expect_value(t, gui.hover_id, id)
     expect_value(t, gui.updated_active, true)

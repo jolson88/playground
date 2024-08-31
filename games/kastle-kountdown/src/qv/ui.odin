@@ -88,12 +88,27 @@ update_control :: proc(gui: ^Gui_State, id: Gui_Id, rect: rl.Rectangle) -> (res:
     hovering := rl.CheckCollisionPointRec(gui.mouse_pos, rect)
 
     // we just started being hovered over
-    if hovering && gui.hover_id != id && (!gui.mouse_down || gui.active_id == id) {
+    // ignore if another card is active as this is part of a drag operation
+    if hovering && gui.hover_id != id && !(gui.active_id != 0 && gui.active_id != id) {
+        // TODO: Move the check for a different active_id into here and register .Drag_Over instead of .Hover_In
         set_hover(gui, id)
         res += {.Hover_In}
     }
 
-    // we're still active
+    // we're being hovered over
+    if gui.hover_id == id {
+        gui.updated_hover = true
+        if !hovering {
+            set_hover(gui, 0)
+            res += {.Hover_Out}
+        }
+        if gui.mouse_pressed && gui.active_id != id {
+            set_active(gui, id)
+            res += {.Active_In, .Click}
+        }
+    }
+
+    // we're active
     if gui.active_id == id {
         gui.updated_active = true
         if (gui.mouse_pressed && !hovering) || !gui.mouse_down {
@@ -112,28 +127,12 @@ update_control :: proc(gui: ^Gui_State, id: Gui_Id, rect: rl.Rectangle) -> (res:
         }
     }
 
-    // we're still being hovered over
-    if gui.hover_id == id {
-        gui.updated_hover = true
-        if gui.mouse_pressed && gui.active_id != id {
-            set_active(gui, id)
-            res += {.Active_In}
-        } else if !hovering {
-            set_hover(gui, 0)
-            res += {.Hover_Out}
-        }
-    }
-
     // we used to be active, but aren't anymore
     if gui.last_active_id == id && gui.active_id != id {
         res += {.Active_Out}
     }
 
-    // we were clicked for the first time
-    if gui.hover_id == id && gui.mouse_pressed {
-        res += {.Click}
-    }
-
+    // Are we still active or hovering?
     if gui.hover_id  == id { res += {.Hover}  }
     if gui.active_id == id { res += {.Active} }
 
