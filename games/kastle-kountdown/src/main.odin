@@ -167,23 +167,12 @@ draw_card :: proc(gs: ^Game_State, loc: Card_Location) -> Card_Id {
 	return 0
 }
 
-redraw_empty_hands :: proc(gs: ^Game_State) {
-	for cid in gs.player_hand {
-		c := lookup_card(gs, cid)
-		if c.loc == .Hand { 
-			return
-		}
-	}
-	redraw_until_full(gs)
+get_suit :: proc(id: Card_Id) -> Card_Suit {
+	return Card_Suit(u8(u64(id) >> 8 & 0xFF))
 }
 
-redraw_until_full :: proc(gs: ^Game_State) {
-	for i in 0..<len(gs.player_hand) {
-		c := lookup_card(gs, gs.player_hand[i])
-		if c.loc != .Hand {
-			gs.player_hand[i] = draw_card(gs, .Hand)
-		}
-	}
+get_value :: proc(id: Card_Id) -> u8 {
+	return u8(u64(id) & 0xFF)
 }
 
 init :: proc(seed: Maybe(u64) = nil) -> Game_State {
@@ -217,11 +206,12 @@ init :: proc(seed: Maybe(u64) = nil) -> Game_State {
 	// generate cards
 	idx := 0
 	assert(len(gs.cards) == 156, "Card stack should allow for twelve stacks for 13 cards / 3 decks of cards")
-	for _ in 1..=3 {
+	for d in 1..=3 {
 		for s in Card_Suit {
 			for v in Card_Value {
 				if s != .Blank && v != .Blank {
-					gs.cards[idx] = Card{ id = Card_Id(rand.uint64()), suit = s, value = v, loc = .Draw_Pile }
+					id := u64(d) << 16 | u64(s) << 8 | u64(v)
+					gs.cards[idx] = Card{ id = Card_Id(id), suit = s, value = v, loc = .Draw_Pile }
 					idx += 1
 				}
 			}
@@ -273,6 +263,25 @@ lookup_card :: proc(gs: ^Game_State, card_id: Card_Id) -> Card {
 	}
 
 	return Card{}
+}
+
+redraw_empty_hands :: proc(gs: ^Game_State) {
+	for cid in gs.player_hand {
+		c := lookup_card(gs, cid)
+		if c.loc == .Hand { 
+			return
+		}
+	}
+	redraw_until_full(gs)
+}
+
+redraw_until_full :: proc(gs: ^Game_State) {
+	for i in 0..<len(gs.player_hand) {
+		c := lookup_card(gs, gs.player_hand[i])
+		if c.loc != .Hand {
+			gs.player_hand[i] = draw_card(gs, .Hand)
+		}
+	}
 }
 
 render_card :: proc(gs: ^Game_State, card_id: Card_Id, pos: rl.Vector2, size: rl.Vector2) {
@@ -350,10 +359,9 @@ render_kastles :: proc(gs: ^Game_State) {
 			k.top_card = gs.selected_card
 			kastle_selected_card(gs, &k)
 		}
+		rl.DrawRectangleRounded(rect, 0.13, 32, k_col_bg)
 		if k.top_card != 0 {
-			render_card(gs, k.top_card, rl.Vector2{rect.x, rect.y}, k_disp_sz)
-		} else {
-			rl.DrawRectangleRounded(rect, 0.13, 32, k_col_bg)
+			render_card(gs, k.top_card, rl.Vector2{rect.x+10, rect.y+10}, rl.Vector2{k_disp_sz.x-20, k_disp_sz.y-20})
 		}
 		x += k_disp_sz.x + k_pad
 	}
