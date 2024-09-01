@@ -69,9 +69,14 @@ Game_State :: struct {
 	cards: [156]Card,
 	selected_card: Card_Id,
 
-	kastles:     [dynamic]Card_Id,
+	kastles:     [dynamic]Kastle,
 	player_hand: [dynamic]Card_Id,
 	player_kd:   [dynamic]Card_Id,
+}
+
+Kastle :: struct {
+	id: qv.Gui_Id,
+	top_card: Card_Id,
 }
 
 // variables
@@ -148,6 +153,13 @@ do_game :: proc() {
 
 	render_kastles()
 	render_player()
+
+	#reverse for pcid, idx in game_state.player_hand {
+		c := retrieve_card(pcid)
+		if c.loc != .Hand {
+			ordered_remove(&game_state.player_hand, idx)
+		}	
+	}
 }
 
 draw_card :: proc(loc: Card_Location) -> Card {
@@ -209,8 +221,14 @@ init :: proc(seed: Maybe(u64) = nil) {
 	context.random_generator = rand.default_random_generator(&r)
 	rand.shuffle(game_state.cards[:])
 
+	game_state.kastles = [dynamic]Kastle{
+		Kastle{ id=qv.Gui_Id(rand.uint64()) },
+		Kastle{ id=qv.Gui_Id(rand.uint64()) },
+		Kastle{ id=qv.Gui_Id(rand.uint64()) },
+		Kastle{ id=qv.Gui_Id(rand.uint64()) },
+	}
+
 	// deal cards
-	game_state.kastles     = make([dynamic]Card_Id, 04)
 	game_state.player_kd   = make([dynamic]Card_Id, 20)
 	game_state.player_hand = make([dynamic]Card_Id, 05)
 	dealt := 0
@@ -221,6 +239,18 @@ init :: proc(seed: Maybe(u64) = nil) {
 	}
 
 	fmt.println("\n--- Initialized game ---\n")
+}
+
+mark_card_as_kastled :: proc(id: Card_Id) {
+	for &c in game_state.cards {
+		if c.id == id {
+			c.is_dragging = false
+			c.is_hovered  = false
+			c.is_selected = false
+			c.loc = .Kastle
+			return
+		}
+	}
 }
 
 render_card :: proc(card_id: Card_Id, pos: rl.Vector2, size: rl.Vector2) {
@@ -291,8 +321,19 @@ render_kastles :: proc() {
 	k_pad: f32  = 20
 	k_disp_w   := (k_disp_sz.x + k_pad) * f32(len(game_state.kastles))
 	x := (sw - k_disp_w) / 2
-	for _ in game_state.kastles {
-		rl.DrawRectangleRounded(rl.Rectangle{x, sh*0.3, k_disp_sz.x, k_disp_sz.y}, 0.13, 32, k_col_bg)
+	for &k in game_state.kastles {
+		rect := rl.Rectangle{x, sh*0.3, k_disp_sz.x, k_disp_sz.y}
+		res  := qv.update_control(&game_state.gui, k.id, rect)
+		if .Click in res && game_state.selected_card != 0 {
+			k.top_card = game_state.selected_card
+			game_state.selected_card = 0
+			mark_card_as_kastled(k.top_card)
+		}
+		if k.top_card != 0 {
+			render_card(k.top_card, rl.Vector2{rect.x, rect.y}, k_disp_sz)
+		} else {
+			rl.DrawRectangleRounded(rect, 0.13, 32, k_col_bg)
+		}
 		x += k_disp_sz.x + k_pad
 	}
 }
