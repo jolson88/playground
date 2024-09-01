@@ -1,4 +1,4 @@
-package mazer
+package kastlegame
 
 import "core:fmt"
 import "core:math/rand"
@@ -152,18 +152,38 @@ do_game :: proc(gs: ^Game_State) {
 
 	render_kastles(gs)
 	render_player(gs)
+	
+	redraw_empty_hands(gs)
 }
 
-draw_card :: proc(gs: ^Game_State, loc: Card_Location) -> Card {
-	card: Card
+draw_card :: proc(gs: ^Game_State, loc: Card_Location) -> Card_Id {
 	for &c in gs.cards {
 		if c.loc == .Draw_Pile {
 			c.loc = loc
-			card = c
-			break
+			return c.id
 		}
 	}
-	return card
+
+	return 0
+}
+
+redraw_empty_hands :: proc(gs: ^Game_State) {
+	for cid in gs.player_hand {
+		c := lookup_card(gs, cid)
+		if c.loc == .Hand { 
+			return
+		}
+	}
+	redraw_until_full(gs)
+}
+
+redraw_until_full :: proc(gs: ^Game_State) {
+	for i in 0..<len(gs.player_hand) {
+		c := lookup_card(gs, gs.player_hand[i])
+		if c.loc != .Hand {
+			gs.player_hand[i] = draw_card(gs, .Hand)
+		}
+	}
 }
 
 init :: proc(seed: Maybe(u64) = nil) -> Game_State {
@@ -197,12 +217,11 @@ init :: proc(seed: Maybe(u64) = nil) -> Game_State {
 	// generate cards
 	idx := 0
 	assert(len(gs.cards) == 156, "Card stack should allow for twelve stacks for 13 cards / 3 decks of cards")
-	for deck in 1..=3 {
+	for _ in 1..=3 {
 		for s in Card_Suit {
 			for v in Card_Value {
 				if s != .Blank && v != .Blank {
-					id := Card_Id(u8(deck) << 16 | u8(s) << 8 | u8(v))
-					gs.cards[idx] = Card{ id = id, suit = s, value = v, loc = .Draw_Pile }
+					gs.cards[idx] = Card{ id = Card_Id(rand.uint64()), suit = s, value = v, loc = .Draw_Pile }
 					idx += 1
 				}
 			}
@@ -225,8 +244,7 @@ init :: proc(seed: Maybe(u64) = nil) -> Game_State {
 	gs.player_hand = make([dynamic]Card_Id, 05)
 	dealt := 0
 	for dealt < len(gs.player_hand) {
-		c := draw_card(&gs, .Hand)
-		gs.player_hand[dealt] = c.id
+		gs.player_hand[dealt] = draw_card(&gs, .Hand)
 		dealt += 1
 	}
 
