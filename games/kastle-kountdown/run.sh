@@ -1,1 +1,1 @@
-odin run src -debug -vet -out:kastle-kountdown.bin
+odin run src -debug -out:kastle-kountdown.bin

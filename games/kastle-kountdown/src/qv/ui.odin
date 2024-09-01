@@ -87,7 +87,6 @@ set_hover :: proc(gui: ^Gui_State, id: Gui_Id) {
 update_control :: proc(gui: ^Gui_State, id: Gui_Id, rect: rl.Rectangle) -> (res: Control_Result_Set) {
     hovering := rl.CheckCollisionPointRec(gui.mouse_pos, rect)
 
-    // we just started being hovered over
     if hovering && gui.hover_id != id {
         if gui.active_id != 0 && gui.active_id != id {
             res += {.Drag_Over}
