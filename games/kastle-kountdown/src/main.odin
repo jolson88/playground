@@ -353,11 +353,15 @@ render_kastles :: proc(gs: ^Game_State) {
 	k_disp_w   := (k_disp_sz.x + k_pad) * f32(len(gs.kastles))
 	x := (sw - k_disp_w) / 2
 	for &k in gs.kastles {
+		can_play := k.top_card == 0 && gs.selected_card != 0
+
 		rect := rl.Rectangle{x, sh*0.3, k_disp_sz.x, k_disp_sz.y}
 		res  := qv.update_control(&gs.gui, k.id, rect)
 		if .Click in res && gs.selected_card != 0 {
-			k.top_card = gs.selected_card
 			kastle_selected_card(gs, &k)
+		}
+		if can_play {
+			rl.DrawRectangleRoundedLines(rl.Rectangle{rect.x-4, rect.y-4, rect.width+8, rect.height+8}, 0.13, 32, 2, rl.WHITE)
 		}
 		rl.DrawRectangleRounded(rect, 0.13, 32, k_col_bg)
 		if k.top_card != 0 {
