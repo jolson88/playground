@@ -16,15 +16,15 @@ Card :: struct {
 	value: Card_Value,
 	loc:   Card_Location,
 	
-	is_hovered, is_selected: bool,
+	is_discarded, is_dragging, is_hovered, is_selected: bool,
 }
 
 Card_Location :: enum u8 {
 	Draw_Pile,
-	Kountdown_Pile,
+	Countdown_Pile,
 	Hand,
-	Kastled,
-	Discarded,
+	Kastle,
+	Discard_Pile,
 }
 
 Card_Suit  :: enum u8 {
@@ -52,14 +52,6 @@ Card_Value :: enum u8 {
 	King,
 }
 
-Nil_Card :: Card{}
-
-Kastle :: struct {
-	top_card: ^Card,
-	pos:      rl.Vector2,
-	size:     rl.Vector2,
-}
-
 Game_State :: struct {
 	card_font:   rl.Font,
 	club_tex:    rl.Texture2D,
@@ -70,13 +62,9 @@ Game_State :: struct {
 	gui:   qv.Gui_State,
 	cards: [156]Card,
 
-	kastle_1: Kastle,
-	kastle_2: Kastle,
-	kastle_3: Kastle,
-	kastle_4: Kastle,
-
-	player_hand:      [05]Card,
-	player_kountdown: [20]Card,
+	kastles:     [dynamic]Card,
+	player_hand: [dynamic]Card,
+	player_cd:   [dynamic]Card,
 }
 
 // variables
@@ -115,7 +103,7 @@ main :: proc() {
 	}
 
 	qv.create_window("Kastle Kountdown", .Seven_Twenty_P)	
-	init()
+	init(1)
 	defer close()
 
     for !rl.WindowShouldClose() {
@@ -132,6 +120,10 @@ main :: proc() {
 }
 
 close :: proc() {
+	delete(game_state.kastles)
+	delete(game_state.player_hand)
+	delete(game_state.player_cd)
+
 	rl.UnloadFont(game_state.card_font)
 	rl.UnloadTexture(game_state.club_tex)
 	rl.UnloadTexture(game_state.diamond_tex)
@@ -144,14 +136,29 @@ do_game :: proc() {
 	bg_col_sec := rl.ColorFromHSV(121, 0.56, 0.38)
 	bg_col_trt := rl.ColorFromHSV(108, 0.77, 0.24)
 
-	// render graphics
 	rl.ClearBackground(rl.BLACK)
 	rl.DrawRectangleGradientEx(rl.Rectangle{0, 0, sw, sh}, bg_col_pri, bg_col_sec, bg_col_trt, bg_col_pri)
 
-	// render player hand
+	render_kastles()
+	render_player()
+}
+
+render_kastles :: proc() {
+	k_col_bg   := rl.Color{0, 0, 0, 50}
+	k_disp_sz  := proto_card_size * 1.1
+	k_pad: f32  = 20
+	k_disp_w   := (k_disp_sz.x + k_pad) * f32(len(game_state.kastles))
+	x := (sw - k_disp_w) / 2
+	for _ in game_state.kastles {
+		rl.DrawRectangleRounded(rl.Rectangle{x, sh*0.3, k_disp_sz.x, k_disp_sz.y}, 0.13, 32, k_col_bg)
+		x += k_disp_sz.x + k_pad
+	}
+}
+
+render_player :: proc() {
 	c_disp_sz  := proto_card_size * 0.7
 	c_pad: f32  = 10
-	h_disp_w   := (c_disp_sz.x + c_pad) * len(game_state.player_hand)
+	h_disp_w   := (c_disp_sz.x + c_pad) * f32(len(game_state.player_hand))
 	x := (sw - h_disp_w) / 2
 	y := sh - c_disp_sz.y - 10
 	for pc in game_state.player_hand {
@@ -172,7 +179,7 @@ draw_card :: proc(loc: Card_Location) -> Card {
 	return card
 }
 
-init :: proc() {
+init :: proc(seed: Maybe(u64) = nil) {
 	sw, sh = f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())
 	game_state = Game_State{}
 
@@ -214,11 +221,14 @@ init :: proc() {
 		}
 	}
 	assert(idx == 156, "Should have initialized 3 decks of cards")
-	r := rand.create(u64(time.time_to_unix(time.now())))
+	r := rand.create(seed.? or_else u64(time.time_to_unix(time.now())))
 	context.random_generator = rand.default_random_generator(&r)
 	rand.shuffle(game_state.cards[:])
 
 	// deal cards
+	game_state.kastles     = make([dynamic]Card, 04)
+	game_state.player_cd   = make([dynamic]Card, 20)
+	game_state.player_hand = make([dynamic]Card, 05)
 	dealt := 0
 	for dealt < 5 {
 		game_state.player_hand[dealt] = draw_card(.Hand)
