@@ -11,17 +11,23 @@ import rl "vendor:raylib"
 
 CARD_FONT_SIZE :: 120
 
+Card_Id :: distinct u64
+
 Card :: struct {
+	id:    Card_Id,
 	suit:  Card_Suit,
 	value: Card_Value,
 	loc:   Card_Location,
 	
-	is_discarded, is_dragging, is_hovered, is_selected: bool,
+	is_discarded: bool,
+	is_dragging:  bool,
+	is_hovered:   bool,
+	is_selected:  bool,
 }
 
 Card_Location :: enum u8 {
 	Draw_Pile,
-	Countdown_Pile,
+	Kountdown_Pile,
 	Hand,
 	Kastle,
 	Discard_Pile,
@@ -61,10 +67,11 @@ Game_State :: struct {
 
 	gui:   qv.Gui_State,
 	cards: [156]Card,
+	selected_card: Card_Id,
 
-	kastles:     [dynamic]Card,
-	player_hand: [dynamic]Card,
-	player_cd:   [dynamic]Card,
+	kastles:     [dynamic]Card_Id,
+	player_hand: [dynamic]Card_Id,
+	player_kd:   [dynamic]Card_Id,
 }
 
 // variables
@@ -122,7 +129,7 @@ main :: proc() {
 close :: proc() {
 	delete(game_state.kastles)
 	delete(game_state.player_hand)
-	delete(game_state.player_cd)
+	delete(game_state.player_kd)
 
 	rl.UnloadFont(game_state.card_font)
 	rl.UnloadTexture(game_state.club_tex)
@@ -141,30 +148,6 @@ do_game :: proc() {
 
 	render_kastles()
 	render_player()
-}
-
-render_kastles :: proc() {
-	k_col_bg   := rl.Color{0, 0, 0, 50}
-	k_disp_sz  := proto_card_size * 1.1
-	k_pad: f32  = 20
-	k_disp_w   := (k_disp_sz.x + k_pad) * f32(len(game_state.kastles))
-	x := (sw - k_disp_w) / 2
-	for _ in game_state.kastles {
-		rl.DrawRectangleRounded(rl.Rectangle{x, sh*0.3, k_disp_sz.x, k_disp_sz.y}, 0.13, 32, k_col_bg)
-		x += k_disp_sz.x + k_pad
-	}
-}
-
-render_player :: proc() {
-	c_disp_sz  := proto_card_size * 0.7
-	c_pad: f32  = 10
-	h_disp_w   := (c_disp_sz.x + c_pad) * f32(len(game_state.player_hand))
-	x := (sw - h_disp_w) / 2
-	y := sh - c_disp_sz.y - 10
-	for pc in game_state.player_hand {
-		render_card(pc, rl.Vector2{x, y}, c_disp_sz)
-		x += c_disp_sz.x + c_pad
-	}
 }
 
 draw_card :: proc(loc: Card_Location) -> Card {
@@ -210,11 +193,12 @@ init :: proc(seed: Maybe(u64) = nil) {
 	// generate cards
 	idx := 0
 	assert(len(game_state.cards) == 156, "Card stack should allow for twelve stacks for 13 cards / 3 decks of cards")
-	for _ in 1..=3 {
+	for deck in 1..=3 {
 		for s in Card_Suit {
 			for v in Card_Value {
 				if s != .Blank && v != .Blank {
-					game_state.cards[idx] = Card{ suit = s, value = v, loc = .Draw_Pile }
+					id := Card_Id(u8(deck) << 16 | u8(s) << 8 | u8(v))
+					game_state.cards[idx] = Card{ id = id, suit = s, value = v, loc = .Draw_Pile }
 					idx += 1
 				}
 			}
@@ -226,19 +210,21 @@ init :: proc(seed: Maybe(u64) = nil) {
 	rand.shuffle(game_state.cards[:])
 
 	// deal cards
-	game_state.kastles     = make([dynamic]Card, 04)
-	game_state.player_cd   = make([dynamic]Card, 20)
-	game_state.player_hand = make([dynamic]Card, 05)
+	game_state.kastles     = make([dynamic]Card_Id, 04)
+	game_state.player_kd   = make([dynamic]Card_Id, 20)
+	game_state.player_hand = make([dynamic]Card_Id, 05)
 	dealt := 0
-	for dealt < 5 {
-		game_state.player_hand[dealt] = draw_card(.Hand)
+	for dealt < len(game_state.player_hand) {
+		c := draw_card(.Hand)
+		game_state.player_hand[dealt] = c.id
 		dealt += 1
 	}
 
 	fmt.println("\n--- Initialized game ---\n")
 }
 
-render_card :: proc(card: Card, pos: rl.Vector2, size: rl.Vector2) {
+render_card :: proc(card_id: Card_Id, pos: rl.Vector2, size: rl.Vector2) {
+	card := retrieve_card(card_id)
 	aspect_ratio: f32 = proto_card_size.x / proto_card_size.y
 	scale_factor: f32 = size.x / proto_card_size.x
 	card_height:  f32 = size.x / aspect_ratio
@@ -247,8 +233,8 @@ render_card :: proc(card: Card, pos: rl.Vector2, size: rl.Vector2) {
 
 	card_shadow := rl.ColorAlpha(rl.ColorFromHSV(102, 0.6, 0.15), 0.3)
 	card_bg_col := rl.ColorFromHSV(42, 0.10, 0.88)
-	card_bg_hov := rl.ColorFromHSV(38, 0.15, 0.86)
-	card_bg_act := rl.ColorFromHSV(35, 0.22, 0.84)
+	card_bg_hov := rl.ColorFromHSV(38, 0.22, 0.86)
+	card_bg_act := rl.ColorFromHSV(35, 0.36, 0.84)
 
 	shadow_offset := rl.Vector2{4, 6}
 	card_col      := card_bg_col
@@ -297,4 +283,76 @@ render_card :: proc(card: Card, pos: rl.Vector2, size: rl.Vector2) {
 		f32(tex.height) * suit_scale
 	}
 	rl.DrawTextureEx(tex, pos + card_size - offset, 0, suit_scale, rl.WHITE)
+}
+
+render_kastles :: proc() {
+	k_col_bg   := rl.Color{0, 0, 0, 50}
+	k_disp_sz  := proto_card_size * 1.1
+	k_pad: f32  = 20
+	k_disp_w   := (k_disp_sz.x + k_pad) * f32(len(game_state.kastles))
+	x := (sw - k_disp_w) / 2
+	for _ in game_state.kastles {
+		rl.DrawRectangleRounded(rl.Rectangle{x, sh*0.3, k_disp_sz.x, k_disp_sz.y}, 0.13, 32, k_col_bg)
+		x += k_disp_sz.x + k_pad
+	}
+}
+
+render_player :: proc() {
+	c_disp_sz  := proto_card_size * 0.7
+	c_pad: f32  = 10
+	h_disp_w   := (c_disp_sz.x + c_pad) * f32(len(game_state.player_hand))
+	x := (sw - h_disp_w) / 2
+	y := sh - c_disp_sz.y - 10
+	for &pcid in game_state.player_hand {
+		res := qv.update_control(&game_state.gui, qv.Gui_Id(pcid), rl.Rectangle{x, y, c_disp_sz.x, c_disp_sz.y})
+		if .Hover_In  in res  { start_hover(pcid) }
+		if .Hover_Out in res  { stop_hover(pcid) }
+		if .Click in res {
+			if game_state.selected_card != 0 && game_state.selected_card != pcid {
+				toggle_select(game_state.selected_card)
+			}
+			toggle_select(pcid)
+			game_state.selected_card = pcid
+		}
+
+		render_card(pcid, rl.Vector2{x, y}, c_disp_sz)
+		x += c_disp_sz.x + c_pad
+	}
+}
+
+retrieve_card :: proc(card_id: Card_Id) -> Card {
+	for c in game_state.cards {
+		if c.id == card_id {
+			return c
+		}
+	}
+
+	return Card{}
+}
+
+start_hover :: proc(card_id: Card_Id) {
+	for &c in game_state.cards {
+		if c.id == card_id {
+			c.is_hovered = true
+			return
+		}
+	}
+}
+
+stop_hover :: proc(card_id: Card_Id) {
+	for &c in game_state.cards {
+		if c.id == card_id {
+			c.is_hovered = false
+			return
+		}
+	}
+}
+
+toggle_select :: proc(card_id: Card_Id) {
+	for &c in game_state.cards {
+		if c.id == card_id {
+			c.is_selected = !c.is_selected
+			return
+		}
+	}
 }
