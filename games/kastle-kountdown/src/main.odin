@@ -130,6 +130,15 @@ main :: proc() {
 	}
 }
 
+assign_to_discard :: proc(gs: ^Game_State, id: Card_Id) {
+	for &c in gs.cards {
+		if c.id == id {
+			c.loc = .Discard_Pile
+			return
+		}
+	}
+}
+
 close :: proc(gs: ^Game_State) {
 	delete(gs.kastles)
 	delete(gs.player_hand)
@@ -143,10 +152,17 @@ close :: proc(gs: ^Game_State) {
 }
 
 do_game :: proc(gs: ^Game_State) {
+	if rl.IsKeyPressed(.R) && ODIN_DEBUG {
+		// force redraw of player's hand
+		for cid in gs.player_hand {
+			assign_to_discard(gs, cid)
+		}
+		redraw_empty_hands(gs)
+	}
+
 	bg_col_pri := rl.ColorFromHSV(132, 0.53, 0.59)
 	bg_col_sec := rl.ColorFromHSV(121, 0.56, 0.38)
 	bg_col_trt := rl.ColorFromHSV(108, 0.77, 0.24)
-
 	rl.ClearBackground(rl.BLACK)
 	rl.DrawRectangleGradientEx(rl.Rectangle{0, 0, sw, sh}, bg_col_pri, bg_col_sec, bg_col_trt, bg_col_pri)
 
