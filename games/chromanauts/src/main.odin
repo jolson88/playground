@@ -1,6 +1,7 @@
 package chromanauts
 
 import "core:fmt"
+import "core:math"
 import "core:math/rand"
 import "core:mem"
 import "core:path/filepath"
@@ -12,9 +13,110 @@ import rl "vendor:raylib"
 Game :: struct {
 	sh, sw: f32,
 	mono_font: rl.Font,
+
+	player: Player,
+}
+
+Player :: struct {
+	pos: rl.Vector2,
+	size: rl.Vector2,
+
+	thrust: rl.Vector2,
+	accel: f32,
+	vel: rl.Vector2,
+	max_speed: f32,
+	friction: f32,
 }
 
 // procedures
+game_close :: proc(game: ^Game) {
+	rl.UnloadFont(game.mono_font)
+}
+
+game_frame :: proc(game: ^Game) {
+	player_input(game)
+	render_frame(game)
+}
+
+game_init :: proc(game: ^Game, seed: Maybe(u64) = nil) {
+	game.sw, game.sh = f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())
+
+	src_dir   := filepath.dir(#file, context.temp_allocator)
+    font_path := filepath.join([]string{src_dir, "resources", "fonts", "DroidSansMono.ttf"}, context.temp_allocator)
+	game.mono_font = rl.LoadFontEx(strings.clone_to_cstring(font_path, context.temp_allocator), 40, nil, 0)
+
+	r := rand.create(seed.? or_else u64(time.time_to_unix(time.now())))
+	context.random_generator = rand.default_random_generator(&r)
+
+	game.player = Player{
+		pos = rl.Vector2{100, 300},
+		size = rl.Vector2{32, 16},
+	}
+}
+
+player_input :: proc(game: ^Game) {
+	using game
+
+	dir := rl.Vector2{0, 0}
+	if rl.IsKeyDown(.UP)   { dir.y = -1 }
+	if rl.IsKeyDown(.DOWN) { dir.y = +1 }
+	player.thrust = rl.Vector2Normalize(dir)
+}
+
+render_frame :: proc(game: ^Game) {
+	using game
+
+	rl.BeginDrawing()
+	rl.ClearBackground(rl.BLACK)
+
+	// player
+	if rand.float32() < 0.95 {
+		rl.DrawTriangle(
+			player.pos + rl.Vector2{-03, player.size.y-4},
+			player.pos + rl.Vector2{-03, 4},
+			player.pos + rl.Vector2{-11, player.size.y/2},
+			rl.ColorBrightness(rl.ORANGE, clamp(rand.float32()-0.5, -0.1, 0.1)),
+		)
+	}
+	if player.thrust.y > 0 {
+		rl.DrawTriangle(
+			player.pos + rl.Vector2{09, -3},
+			player.pos + rl.Vector2{21, -3},
+			player.pos + rl.Vector2{15, -8},
+			rl.ORANGE,
+		)
+	}
+	if player.thrust.y < 0 {
+		rl.DrawTriangle(
+			player.pos + rl.Vector2{09, player.size.y+3},
+			player.pos + rl.Vector2{15, player.size.y+8},
+			player.pos + rl.Vector2{21, player.size.y+3},
+			rl.ORANGE,
+		)
+
+	}
+
+	rl.DrawRectangleV(player.pos, player.size, rl.RAYWHITE)
+	rl.DrawTriangle(
+		player.pos + rl.Vector2{player.size.x, 2},
+		player.pos + rl.Vector2{player.size.x, player.size.y-2},
+		player.pos + rl.Vector2{player.size.x+player.size.y, player.size.y/2},
+		rl.RED,
+	)
+	rl.DrawRectangle(
+		i32(player.pos.x + player.size.x - 5),
+		i32(player.pos.y),
+		5, i32(player.size.y), rl.LIME
+	)
+	rl.DrawRectangle(
+		i32(player.pos.x + player.size.x - 10),
+		i32(player.pos.y),
+		5, i32(player.size.y), rl.SKYBLUE
+	)
+
+	rl.EndDrawing()
+}
+
 main :: proc() {
     when ODIN_DEBUG {
 		track: mem.Tracking_Allocator
@@ -47,28 +149,6 @@ main :: proc() {
 
     for !rl.WindowShouldClose() {
 		free_all(context.temp_allocator)
-		
 		game_frame(&game)	
 	}
-}
-
-game_close :: proc(game: ^Game) {
-	rl.UnloadFont(game.mono_font)
-}
-
-game_frame :: proc(game: ^Game) {
-	rl.BeginDrawing()
-	rl.ClearBackground(rl.SKYBLUE)
-	rl.EndDrawing()
-}
-
-game_init :: proc(game: ^Game, seed: Maybe(u64) = nil) {
-	game.sw, game.sh = f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())
-
-	src_dir   := filepath.dir(#file, context.temp_allocator)
-    font_path := filepath.join([]string{src_dir, "resources", "fonts", "DroidSansMono.ttf"}, context.temp_allocator)
-	game.mono_font = rl.LoadFontEx(strings.clone_to_cstring(font_path, context.temp_allocator), 40, nil, 0)
-
-	r := rand.create(seed.? or_else u64(time.time_to_unix(time.now())))
-	context.random_generator = rand.default_random_generator(&r)
 }
