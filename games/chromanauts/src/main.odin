@@ -35,6 +35,8 @@ game_close :: proc(game: ^Game) {
 
 game_frame :: proc(game: ^Game) {
 	player_input(game)
+	player_update(game)
+
 	render_frame(game)
 }
 
@@ -51,6 +53,9 @@ game_init :: proc(game: ^Game, seed: Maybe(u64) = nil) {
 	game.player = Player{
 		pos = rl.Vector2{100, 300},
 		size = rl.Vector2{32, 16},
+		accel = 15,
+		max_speed = 10,
+		friction = 3,
 	}
 }
 
@@ -63,11 +68,34 @@ player_input :: proc(game: ^Game) {
 	player.thrust = rl.Vector2Normalize(dir)
 }
 
+player_update :: proc(game: ^Game) {
+	using game
+	dt := rl.GetFrameTime()
+
+	accel_vec := player.thrust * player.accel * dt
+	player.vel += accel_vec
+	if rl.Vector2Length(player.vel) > player.max_speed {
+		player.vel = rl.Vector2Normalize(player.vel) * player.max_speed
+	}
+	player.pos += player.vel
+	if player.pos.y+player.size.y > sh {
+		player.pos.y = sh-player.size.y
+	}
+	if player.pos.y < 10 { player.pos.y = 10 }
+	if player.pos.x < 10 { player.pos.x = 10 }
+	if player.pos.x > sw / 3 {
+		player.pos.x = sw / 3
+	}
+
+	player.vel *= (1 - player.friction * dt)
+}
+
 render_frame :: proc(game: ^Game) {
 	using game
 
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.BLACK)
+	rl.DrawFPS(5, 5)
 
 	// player
 	if rand.float32() < 0.95 {
@@ -103,15 +131,15 @@ render_frame :: proc(game: ^Game) {
 		player.pos + rl.Vector2{player.size.x+player.size.y, player.size.y/2},
 		rl.RED,
 	)
-	rl.DrawRectangle(
-		i32(player.pos.x + player.size.x - 5),
-		i32(player.pos.y),
-		5, i32(player.size.y), rl.LIME
+	rl.DrawRectangleV(
+		player.pos + rl.Vector2{player.size.x, 0} + rl.Vector2{-5, 0},
+		rl.Vector2{5, player.size.y},
+		rl.LIME
 	)
-	rl.DrawRectangle(
-		i32(player.pos.x + player.size.x - 10),
-		i32(player.pos.y),
-		5, i32(player.size.y), rl.SKYBLUE
+	rl.DrawRectangleV(
+		player.pos + rl.Vector2{player.size.x, 0} + rl.Vector2{-10, 0},
+		rl.Vector2{5, player.size.y},
+		rl.SKYBLUE
 	)
 
 	rl.EndDrawing()
