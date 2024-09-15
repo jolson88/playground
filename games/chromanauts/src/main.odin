@@ -53,7 +53,7 @@ game_init :: proc(game: ^Game, seed: Maybe(u64) = nil) {
 	game.player = Player{
 		pos = rl.Vector2{100, 300},
 		size = rl.Vector2{32, 16},
-		accel = 15,
+		accel = 20,
 		max_speed = 10,
 		friction = 3,
 	}
@@ -63,8 +63,10 @@ player_input :: proc(game: ^Game) {
 	using game
 
 	dir := rl.Vector2{0, 0}
-	if rl.IsKeyDown(.UP)   { dir.y = -1 }
-	if rl.IsKeyDown(.DOWN) { dir.y = +1 }
+	if rl.IsKeyDown(.UP)    { dir.y = -1 }
+	if rl.IsKeyDown(.DOWN)  { dir.y = +1 }
+	if rl.IsKeyDown(.LEFT)  { dir.x = -1 }
+	if rl.IsKeyDown(.RIGHT) { dir.x = +1 }
 	player.thrust = rl.Vector2Normalize(dir)
 }
 
@@ -78,13 +80,14 @@ player_update :: proc(game: ^Game) {
 		player.vel = rl.Vector2Normalize(player.vel) * player.max_speed
 	}
 	player.pos += player.vel
-	if player.pos.y+player.size.y > sh {
-		player.pos.y = sh-player.size.y
+	margin: f32 = 20
+	if player.pos.y + player.size.y + margin > sh {
+		player.pos.y = sh - player.size.y - margin
 	}
-	if player.pos.y < 10 { player.pos.y = 10 }
-	if player.pos.x < 10 { player.pos.x = 10 }
-	if player.pos.x > sw / 3 {
-		player.pos.x = sw / 3
+	if player.pos.y < margin { player.pos.y = margin }
+	if player.pos.x < margin { player.pos.x = margin }
+	if player.pos.x + player.size.x + margin > sw {
+		player.pos.x = sw - player.size.x - margin
 	}
 
 	player.vel *= (1 - player.friction * dt)
@@ -121,7 +124,28 @@ render_frame :: proc(game: ^Game) {
 			player.pos + rl.Vector2{21, player.size.y+3},
 			rl.ORANGE,
 		)
-
+	}
+	if player.thrust.x > 0 {
+		rl.DrawTriangle(
+			player.pos + rl.Vector2{-13, player.size.y-4},
+			player.pos + rl.Vector2{-13, 4},
+			player.pos + rl.Vector2{-21, player.size.y/2},
+			rl.ORANGE,
+		)
+	}
+	if player.thrust.x < 0 {
+		rl.DrawTriangle(
+			player.pos + rl.Vector2{player.size.x+0, -3},
+			player.pos + rl.Vector2{player.size.x+6, -5},
+			player.pos + rl.Vector2{player.size.x+0, -7},
+			rl.ORANGE,
+		)
+		rl.DrawTriangle(
+			player.pos + rl.Vector2{player.size.x+0, player.size.y+3},
+			player.pos + rl.Vector2{player.size.x+0, player.size.y+7},
+			player.pos + rl.Vector2{player.size.x+6, player.size.y+5},
+			rl.ORANGE,
+		)
 	}
 
 	rl.DrawRectangleV(player.pos, player.size, rl.RAYWHITE)
