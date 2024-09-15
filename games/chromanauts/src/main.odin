@@ -14,6 +14,7 @@ Game :: struct {
 	sh, sw: f32,
 	mono_font: rl.Font,
 
+	starfield: [600]Star,
 	player: Player,
 }
 
@@ -28,16 +29,15 @@ Player :: struct {
 	friction: f32,
 }
 
+Star :: struct {
+	pos: rl.Vector2,
+	vel: rl.Vector2,
+	color: rl.Color,
+}
+
 // procedures
 game_close :: proc(game: ^Game) {
 	rl.UnloadFont(game.mono_font)
-}
-
-game_frame :: proc(game: ^Game) {
-	player_input(game)
-	player_update(game)
-
-	render_frame(game)
 }
 
 game_init :: proc(game: ^Game, seed: Maybe(u64) = nil) {
@@ -57,50 +57,25 @@ game_init :: proc(game: ^Game, seed: Maybe(u64) = nil) {
 		max_speed = 6,
 		friction = 4,
 	}
-}
-
-player_input :: proc(game: ^Game) {
-	using game
-
-	dir := rl.Vector2{0, 0}
-	if rl.IsKeyDown(.UP)    { dir.y = -1 }
-	if rl.IsKeyDown(.DOWN)  { dir.y = +1 }
-	if rl.IsKeyDown(.LEFT)  { dir.x = -1 }
-	if rl.IsKeyDown(.RIGHT) { dir.x = +1 }
-	player.thrust = rl.Vector2Normalize(dir)
-}
-
-player_update :: proc(game: ^Game) {
-	using game
-	dt := rl.GetFrameTime()
-
-	accel_vec := player.thrust * player.accel * dt
-	player.vel += accel_vec
-	if rl.Vector2Length(player.vel) > player.max_speed {
-		player.vel = rl.Vector2Normalize(player.vel) * player.max_speed
-	}
-	player.pos += player.vel
-	margin: f32 = 20
-	if player.pos.y + player.size.y + margin > sh {
-		player.pos.y = sh - player.size.y - margin
-	}
-	if player.pos.y < margin { player.pos.y = margin }
-	if player.pos.x < margin { player.pos.x = margin }
-	if player.pos.x + player.size.x + margin > sw {
-		player.pos.x = sw - player.size.x - margin
-	}
-
-	if rl.Vector2Length(player.thrust) < math.F32_EPSILON {
-		player.vel *= (1 - player.friction * dt)
+	for &s in game.starfield {
+		redness: f32 = clamp(rand.float32() * 2, 0.5, 1.0)
+		color := rl.Color{200, u8(200*redness), u8(200*redness), 255}
+		s.pos = rl.Vector2{game.sw * rand.float32(), game.sh * rand.float32()}
+		s.vel = rl.Vector2{-10 * rand.float32(), 0}
+		s.color = color
 	}
 }
 
-render_frame :: proc(game: ^Game) {
+game_render :: proc(game: ^Game) {
 	using game
 
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.BLACK)
-	rl.DrawFPS(5, 5)
+
+	// stars
+	for s in starfield {
+		rl.DrawCircleV(s.pos, 1, s.color)
+	}
 
 	// player
 	if rand.float32() < 0.95 {
@@ -171,6 +146,59 @@ render_frame :: proc(game: ^Game) {
 	rl.EndDrawing()
 }
 
+game_tick :: proc(game: ^Game) {
+	using game
+	dt := rl.GetFrameTime()
+
+	player_input(game)
+	player_tick(game)
+
+	// stars
+	for &s in starfield {
+		s.pos += s.vel * dt
+		if s.pos.x < 0 {
+			s.pos.x = sw
+		}
+	}
+}
+
+player_input :: proc(game: ^Game) {
+	using game
+
+	dir := rl.Vector2{0, 0}
+	if rl.IsKeyDown(.UP)    { dir.y = -1 }
+	if rl.IsKeyDown(.DOWN)  { dir.y = +1 }
+	if rl.IsKeyDown(.LEFT)  { dir.x = -1 }
+	if rl.IsKeyDown(.RIGHT) { dir.x = +1 }
+	player.thrust = rl.Vector2Normalize(dir)
+}
+
+player_tick :: proc(game: ^Game) {
+	using game
+	dt := rl.GetFrameTime()
+
+	accel_vec := player.thrust * player.accel * dt
+	player.vel += accel_vec
+	if rl.Vector2Length(player.vel) > player.max_speed {
+		player.vel = rl.Vector2Normalize(player.vel) * player.max_speed
+	}
+	player.pos += player.vel
+	margin: f32 = 20
+	if player.pos.y + player.size.y + margin > sh {
+		player.pos.y = sh - player.size.y - margin
+	}
+	if player.pos.y < margin { player.pos.y = margin }
+	if player.pos.x < margin { player.pos.x = margin }
+	if player.pos.x + player.size.x + margin > sw {
+		player.pos.x = sw - player.size.x - margin
+	}
+
+	if rl.Vector2Length(player.thrust) < math.F32_EPSILON {
+		player.vel *= (1 - player.friction * dt)
+	}
+}
+
+
 main :: proc() {
     when ODIN_DEBUG {
 		track: mem.Tracking_Allocator
@@ -196,6 +224,7 @@ main :: proc() {
 
 	rl.InitWindow(1280, 720, "Chromanauts")
 	rl.SetTargetFPS(60)
+	rl.HideCursor()
 
 	game := Game{}
 	game_init(&game)
@@ -203,6 +232,7 @@ main :: proc() {
 
     for !rl.WindowShouldClose() {
 		free_all(context.temp_allocator)
-		game_frame(&game)	
+		game_tick(&game)
+		game_render(&game)
 	}
 }
