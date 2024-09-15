@@ -10,12 +10,30 @@ import "core:time"
 import rl "vendor:raylib"
 
 // structures
+Bullet :: struct {
+	status: Bullet_Status,
+	pos: rl.Vector2,
+	size: rl.Vector2,
+	accel: f32,
+	vel: rl.Vector2,
+	
+	color: rl.Color,
+}
+
+Bullet_Status :: enum {
+	Dead = 0,
+	Alive,
+	Exploding,
+}
+
 Game :: struct {
 	sh, sw: f32,
+
 	mono_font: rl.Font,
 
-	starfield: [600]Star,
+	starfield: [200]Star,
 	player: Player,
+	player_bullets: [200]Bullet,
 }
 
 Player :: struct {
@@ -27,6 +45,10 @@ Player :: struct {
 	vel: rl.Vector2,
 	max_speed: f32,
 	friction: f32,
+
+	is_firing: bool,
+	fire_rate: f32,		// Number of bullets per second that the player can fire
+	weapon_cd: f32,		// Remaining cooldown time in seconds until the weapon can fire again
 }
 
 Star :: struct {
@@ -56,12 +78,13 @@ game_init :: proc(game: ^Game, seed: Maybe(u64) = nil) {
 		accel = 8,
 		max_speed = 6,
 		friction = 4,
+		fire_rate = 6,
 	}
 	for &s in game.starfield {
 		redness: f32 = clamp(rand.float32() * 2, 0.5, 1.0)
 		color := rl.Color{200, u8(200*redness), u8(200*redness), 255}
 		s.pos = rl.Vector2{game.sw * rand.float32(), game.sh * rand.float32()}
-		s.vel = rl.Vector2{-10 * rand.float32(), 0}
+		s.vel = rl.Vector2{-20 * rand.float32(), 0}
 		s.color = color
 	}
 }
@@ -71,6 +94,7 @@ game_render :: proc(game: ^Game) {
 
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.BLACK)
+	defer rl.EndDrawing()
 
 	// stars
 	for s in starfield {
@@ -124,7 +148,6 @@ game_render :: proc(game: ^Game) {
 			rl.ORANGE,
 		)
 	}
-
 	rl.DrawRectangleV(player.pos, player.size, rl.RAYWHITE)
 	rl.DrawTriangle(
 		player.pos + rl.Vector2{player.size.x, 2},
@@ -143,7 +166,12 @@ game_render :: proc(game: ^Game) {
 		rl.BLUE
 	)
 
-	rl.EndDrawing()
+	// bullets
+	for pb in player_bullets {
+		if pb.status == .Alive {
+			rl.DrawRectangleV(pb.pos, pb.size, pb.color)
+		}
+	}
 }
 
 game_tick :: proc(game: ^Game) {
@@ -160,6 +188,22 @@ game_tick :: proc(game: ^Game) {
 			s.pos.x = sw
 		}
 	}
+
+	// bullets
+	for &pb in player_bullets {
+		if pb.status == .Alive {
+			pb.pos += pb.vel * dt
+			if pb.pos.x > sw {
+				pb.status = .Dead
+			}
+		}
+	}
+}
+
+player_can_fire :: proc(game: ^Game) -> bool {
+	using game
+
+	return player.weapon_cd <= 0
 }
 
 player_input :: proc(game: ^Game) {
@@ -171,12 +215,15 @@ player_input :: proc(game: ^Game) {
 	if rl.IsKeyDown(.LEFT)  { dir.x = -1 }
 	if rl.IsKeyDown(.RIGHT) { dir.x = +1 }
 	player.thrust = rl.Vector2Normalize(dir)
+
+	player.is_firing = true if rl.IsKeyDown(.SPACE) else false
 }
 
 player_tick :: proc(game: ^Game) {
 	using game
 	dt := rl.GetFrameTime()
 
+	// movement
 	accel_vec := player.thrust * player.accel * dt
 	player.vel += accel_vec
 	if rl.Vector2Length(player.vel) > player.max_speed {
@@ -195,6 +242,23 @@ player_tick :: proc(game: ^Game) {
 
 	if rl.Vector2Length(player.thrust) < math.F32_EPSILON {
 		player.vel *= (1 - player.friction * dt)
+	}
+
+	// weapon
+	player.weapon_cd -= dt
+	if player.is_firing && player_can_fire(game) {
+		player.weapon_cd = (1 / player.fire_rate)
+		for &b in player_bullets {
+			if b.status == .Dead {
+				b.status = .Alive
+				b.pos = player.pos + rl.Vector2{player.size.x+15, player.size.y/2}
+				b.size = rl.Vector2{10, 4}
+				b.color = rl.RED
+				b.vel = rl.Vector2{600, 0}
+				b.accel = 10
+				break
+			}
+		}
 	}
 }
 
