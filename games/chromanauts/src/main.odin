@@ -53,9 +53,9 @@ game_init :: proc(game: ^Game, seed: Maybe(u64) = nil) {
 	game.player = Player{
 		pos = rl.Vector2{100, 300},
 		size = rl.Vector2{32, 16},
-		accel = 20,
-		max_speed = 10,
-		friction = 3,
+		accel = 8,
+		max_speed = 6,
+		friction = 4,
 	}
 }
 
@@ -90,7 +90,9 @@ player_update :: proc(game: ^Game) {
 		player.pos.x = sw - player.size.x - margin
 	}
 
-	player.vel *= (1 - player.friction * dt)
+	if rl.Vector2Length(player.thrust) < math.F32_EPSILON {
+		player.vel *= (1 - player.friction * dt)
+	}
 }
 
 render_frame :: proc(game: ^Game) {
@@ -163,7 +165,7 @@ render_frame :: proc(game: ^Game) {
 	rl.DrawRectangleV(
 		player.pos + rl.Vector2{player.size.x, 0} + rl.Vector2{-10, 0},
 		rl.Vector2{5, player.size.y},
-		rl.SKYBLUE
+		rl.BLUE
 	)
 
 	rl.EndDrawing()
