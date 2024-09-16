@@ -228,7 +228,7 @@ player_render :: proc(game: ^Game) {
 			rl.ORANGE,
 		)
 	}
-	rl.DrawRectangleV(player.pos, player.size, rl.LIGHTGRAY)
+	rl.DrawRectangleV(player.pos, player.size, rl.RAYWHITE)
 	rl.DrawRectangleV(
 		player.pos + rl.Vector2{player.size.x/3, 5},
 		rl.Vector2{((player.size.x/3)*2) + 10, 6},
