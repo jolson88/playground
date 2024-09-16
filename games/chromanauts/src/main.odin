@@ -26,12 +26,28 @@ Bullet_Status :: enum {
 	Exploding,
 }
 
+Enemy :: struct {
+	status: Enemy_Status,
+	pos_base: rl.Vector2,
+	pos_offset: rl.Vector2,
+	vel: rl.Vector2,
+
+	color: rl.Color,
+}
+
+Enemy_Status :: enum {
+	Dead = 0,
+	Alive,
+	Exploding,
+}
+
 Game :: struct {
 	sh, sw: f32,
 
 	mono_font: rl.Font,
-
 	starfield: [200]Star,
+
+	enemies: [200]Enemy,
 	player: Player,
 	player_bullets: [200]Bullet,
 }
@@ -46,9 +62,9 @@ Player :: struct {
 	max_speed: f32,
 	friction: f32,
 
-	is_firing: bool,
-	fire_rate: f32,		// Number of bullets per second that the player can fire
-	weapon_cd: f32,		// Remaining cooldown time in seconds until the weapon can fire again
+	firing_requested: bool,
+	fire_rate: f32,				// Number of bullets per second that the player can fire
+	weapon_cd: f32,				// Remaining cooldown time in seconds until the weapon can fire again
 }
 
 Star :: struct {
@@ -78,7 +94,7 @@ game_init :: proc(game: ^Game, seed: Maybe(u64) = nil) {
 		accel = 8,
 		max_speed = 6,
 		friction = 4,
-		fire_rate = 6,
+		fire_rate = 4,
 	}
 	for &s in game.starfield {
 		redness: f32 = clamp(rand.float32() * 2, 0.5, 1.0)
@@ -98,10 +114,88 @@ game_render :: proc(game: ^Game) {
 
 	// stars
 	for s in starfield {
-		rl.DrawCircleV(s.pos, 1, s.color)
+		rl.DrawRectangleV(s.pos, rl.Vector2{2, 2}, s.color)
 	}
 
-	// player
+	player_render(game)
+
+	// bullets
+	for pb in player_bullets {
+		if pb.status == .Alive {
+			rl.DrawRectangleV(pb.pos, pb.size, pb.color)
+		}
+	}
+}
+
+game_tick :: proc(game: ^Game) {
+	using game
+	dt := rl.GetFrameTime()
+
+	player_input(game)
+	player_tick(game)
+	player.weapon_cd -= dt
+
+	// stars
+	for &s in starfield {
+		s.pos += s.vel * dt
+		if s.pos.x < 0 {
+			s.pos.x = sw
+		}
+	}
+
+	// bullets
+	for &pb in player_bullets {
+		if pb.status == .Alive {
+			pb.vel.x += pb.accel * dt
+			pb.pos += pb.vel * dt
+			if pb.pos.x > sw {
+				pb.status = .Dead
+			}
+		}
+	}
+}
+
+player_can_fire :: proc(game: ^Game) -> bool {
+	using game
+
+	return player.weapon_cd <= 0
+}
+
+player_fire :: proc(game: ^Game) {
+	using game
+
+	if player_can_fire(game) {
+		player.weapon_cd = (1 / player.fire_rate)
+		for &b in player_bullets {
+			if b.status == .Dead {
+				b.status = .Alive
+				b.pos = player.pos + rl.Vector2{player.size.x+15, player.size.y/2}
+				b.size = rl.Vector2{10, 4}
+				b.color = rl.RED
+				b.vel = rl.Vector2{600, 0}
+				b.accel = 100
+				break
+			}
+		}
+	}
+}
+
+player_input :: proc(game: ^Game) {
+	using game
+
+	dir := rl.Vector2{0, 0}
+	if rl.IsKeyDown(.UP)    { dir.y = -1 }
+	if rl.IsKeyDown(.DOWN)  { dir.y = +1 }
+	if rl.IsKeyDown(.LEFT)  { dir.x = -1 }
+	if rl.IsKeyDown(.RIGHT) { dir.x = +1 }
+	player.thrust = rl.Vector2Normalize(dir)
+
+	player.firing_requested = true if rl.IsKeyDown(.SPACE) else false
+}
+
+player_render :: proc(game: ^Game) {
+	using game
+
 	if rand.float32() < 0.95 {
 		rl.DrawTriangle(
 			player.pos + rl.Vector2{-03, player.size.y-4},
@@ -134,89 +228,22 @@ game_render :: proc(game: ^Game) {
 			rl.ORANGE,
 		)
 	}
-	if player.thrust.x < 0 {
-		rl.DrawTriangle(
-			player.pos + rl.Vector2{player.size.x+0, -3},
-			player.pos + rl.Vector2{player.size.x+6, -5},
-			player.pos + rl.Vector2{player.size.x+0, -7},
-			rl.ORANGE,
-		)
-		rl.DrawTriangle(
-			player.pos + rl.Vector2{player.size.x+0, player.size.y+3},
-			player.pos + rl.Vector2{player.size.x+0, player.size.y+7},
-			player.pos + rl.Vector2{player.size.x+6, player.size.y+5},
-			rl.ORANGE,
-		)
-	}
-	rl.DrawRectangleV(player.pos, player.size, rl.RAYWHITE)
-	rl.DrawTriangle(
-		player.pos + rl.Vector2{player.size.x, 2},
-		player.pos + rl.Vector2{player.size.x, player.size.y-2},
-		player.pos + rl.Vector2{player.size.x+player.size.y, player.size.y/2},
+	rl.DrawRectangleV(player.pos, player.size, rl.LIGHTGRAY)
+	rl.DrawRectangleV(
+		player.pos + rl.Vector2{player.size.x/3, 5},
+		rl.Vector2{((player.size.x/3)*2) + 10, 6},
 		rl.RED,
 	)
 	rl.DrawRectangleV(
-		player.pos + rl.Vector2{player.size.x, 0} + rl.Vector2{-5, 0},
-		rl.Vector2{5, player.size.y},
-		rl.LIME
+		player.pos + rl.Vector2{player.size.x/2, 1},
+		rl.Vector2{player.size.x/2, 4},
+		rl.BLUE,
 	)
 	rl.DrawRectangleV(
-		player.pos + rl.Vector2{player.size.x, 0} + rl.Vector2{-10, 0},
-		rl.Vector2{5, player.size.y},
-		rl.BLUE
+		player.pos + rl.Vector2{player.size.x/2, player.size.y-5},
+		rl.Vector2{player.size.x/2, 4},
+		rl.LIME,
 	)
-
-	// bullets
-	for pb in player_bullets {
-		if pb.status == .Alive {
-			rl.DrawRectangleV(pb.pos, pb.size, pb.color)
-		}
-	}
-}
-
-game_tick :: proc(game: ^Game) {
-	using game
-	dt := rl.GetFrameTime()
-
-	player_input(game)
-	player_tick(game)
-
-	// stars
-	for &s in starfield {
-		s.pos += s.vel * dt
-		if s.pos.x < 0 {
-			s.pos.x = sw
-		}
-	}
-
-	// bullets
-	for &pb in player_bullets {
-		if pb.status == .Alive {
-			pb.pos += pb.vel * dt
-			if pb.pos.x > sw {
-				pb.status = .Dead
-			}
-		}
-	}
-}
-
-player_can_fire :: proc(game: ^Game) -> bool {
-	using game
-
-	return player.weapon_cd <= 0
-}
-
-player_input :: proc(game: ^Game) {
-	using game
-
-	dir := rl.Vector2{0, 0}
-	if rl.IsKeyDown(.UP)    { dir.y = -1 }
-	if rl.IsKeyDown(.DOWN)  { dir.y = +1 }
-	if rl.IsKeyDown(.LEFT)  { dir.x = -1 }
-	if rl.IsKeyDown(.RIGHT) { dir.x = +1 }
-	player.thrust = rl.Vector2Normalize(dir)
-
-	player.is_firing = true if rl.IsKeyDown(.SPACE) else false
 }
 
 player_tick :: proc(game: ^Game) {
@@ -245,20 +272,8 @@ player_tick :: proc(game: ^Game) {
 	}
 
 	// weapon
-	player.weapon_cd -= dt
-	if player.is_firing && player_can_fire(game) {
-		player.weapon_cd = (1 / player.fire_rate)
-		for &b in player_bullets {
-			if b.status == .Dead {
-				b.status = .Alive
-				b.pos = player.pos + rl.Vector2{player.size.x+15, player.size.y/2}
-				b.size = rl.Vector2{10, 4}
-				b.color = rl.RED
-				b.vel = rl.Vector2{600, 0}
-				b.accel = 10
-				break
-			}
-		}
+	if player.firing_requested && player_can_fire(game) {
+		player_fire(game)
 	}
 }
 
