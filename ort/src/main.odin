@@ -11,13 +11,15 @@ import rl "vendor:raylib"
 
 Split_Flap_Charset :: " ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
 
+Charset_Index :: distinct u8
+
 Split_Flap :: struct {
 	pos:  rl.Vector2,
 
 	cols: u32,
 	rows: u32,
-	cells: [dynamic]u8,
-	cells_target: [dynamic]u8,
+	cells: [dynamic]Charset_Index,
+	cells_target: [dynamic]Charset_Index,
 	margin:  f32,
 	padding: f32,
 
@@ -36,7 +38,7 @@ split_flap_destroy :: proc(sf: ^Split_Flap) {
 	delete(sf.cells_target)
 }
 
-split_flap_init :: proc(sf: ^Split_Flap, font: rl.Font, font_size: f32) {
+split_flap_init :: proc(sf: ^Split_Flap, font: rl.Font, font_size: f32, allocator := context.allocator) {
 	text_size := rl.MeasureTextEx(font, "Y", font_size, 0)
 
 	sf.font         = font
@@ -44,11 +46,15 @@ split_flap_init :: proc(sf: ^Split_Flap, font: rl.Font, font_size: f32) {
 	sf.text_width   = text_size.x
 	sf.text_height  = text_size.y
 	sf.charset      = Split_Flap_Charset
-	sf.cells        = make([dynamic]u8, sf.cols*sf.rows, sf.cols*sf.rows)
-	sf.cells_target = make([dynamic]u8, sf.cols*sf.rows, sf.cols*sf.rows)
+	sf.cells        = make([dynamic]Charset_Index, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
+	sf.cells_target = make([dynamic]Charset_Index, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
 
+	split_flap_rand(sf)
+}
+
+split_flap_rand :: proc(sf: ^Split_Flap) {
 	for i := 0; i < len(sf.cells_target); i += 1 {
-		sf.cells_target[i] = u8(rand.int_max(len(Split_Flap_Charset)))
+		sf.cells_target[i] = Charset_Index(rand.int_max(len(Split_Flap_Charset)))
 	}
 }
 
@@ -57,6 +63,12 @@ split_flap_tick :: proc(sf: ^Split_Flap, dt: f32) {
 
 	ttc -= dt
 	if ttc < 0 {
+		for c, idx in sf.cells {
+			if c != sf.cells_target[idx] {
+				new_c := 0 if c==Charset_Index(len(sf.charset)-1) else c+1
+				sf.cells[idx] = new_c
+			}
+		}
 		ttc = refresh_rate
 	}
 }
@@ -78,7 +90,7 @@ split_flap_render :: proc(sf: ^Split_Flap) {
 			sf.pos.y + sf.margin + (f32(row)*sf.text_height + f32(row)*sf.padding),
 		}
 		rl.DrawRectangleV(pos, rl.Vector2{sf.text_width, sf.text_height}, rl.BLACK)
-		char_idx := sf.cells_target[idx]
+		char_idx := sf.cells[idx]
 		text: string = sf.charset[char_idx:char_idx+1]
 		rl.DrawTextEx(sf.font, strings.clone_to_cstring(text, context.temp_allocator), pos, sf.font_size, 0, rl.YELLOW)
 	}
@@ -121,7 +133,7 @@ main :: proc() {
 		rows = 12,
 		margin = 10,
 		padding = 5,
-		refresh_rate = 1 / 60,
+		refresh_rate = 1.0 / 20.0,
 	}
 	split_flap_init(&sf, mono_font, 24)
 	defer split_flap_destroy(&sf)
@@ -129,6 +141,10 @@ main :: proc() {
     for !rl.WindowShouldClose() {
 		free_all(context.temp_allocator)
 		dt := rl.GetFrameTime()
+
+		if rl.IsKeyDown(.SPACE) {
+			split_flap_rand(&sf)
+		}
 
 		split_flap_tick(&sf, dt)
 
