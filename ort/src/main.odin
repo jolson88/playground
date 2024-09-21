@@ -25,6 +25,7 @@ Split_Flap :: struct {
 	font_size:   f32,
 	text_width:  f32,
 	text_height: f32,
+	charset: string,
 
 	refresh_rate: f32, 	// Number of seconds to elapse between cycles / character advancements
 	ttc: f32,			// Number of seconds remaining until the next cycling of characters
@@ -42,8 +43,13 @@ split_flap_init :: proc(sf: ^Split_Flap, font: rl.Font, font_size: f32) {
 	sf.font_size    = font_size
 	sf.text_width   = text_size.x
 	sf.text_height  = text_size.y
+	sf.charset      = Split_Flap_Charset
 	sf.cells        = make([dynamic]u8, sf.cols*sf.rows, sf.cols*sf.rows)
 	sf.cells_target = make([dynamic]u8, sf.cols*sf.rows, sf.cols*sf.rows)
+
+	for i := 0; i < len(sf.cells_target); i += 1 {
+		sf.cells_target[i] = u8(rand.int_max(len(Split_Flap_Charset)))
+	}
 }
 
 split_flap_tick :: proc(sf: ^Split_Flap, dt: f32) {
@@ -64,7 +70,6 @@ split_flap_render :: proc(sf: ^Split_Flap) {
 	rl.DrawRectangleV(sf.pos, dim, rl.DARKGRAY)
 
 	pos := sf.pos + rl.Vector2{sf.margin, sf.margin}
-
 	for c, idx in sf.cells {
 		row := u32(idx) / sf.cols
 		col := u32(idx) % sf.cols
@@ -73,6 +78,9 @@ split_flap_render :: proc(sf: ^Split_Flap) {
 			sf.pos.y + sf.margin + (f32(row)*sf.text_height + f32(row)*sf.padding),
 		}
 		rl.DrawRectangleV(pos, rl.Vector2{sf.text_width, sf.text_height}, rl.BLACK)
+		char_idx := sf.cells_target[idx]
+		text: string = sf.charset[char_idx:char_idx+1]
+		rl.DrawTextEx(sf.font, strings.clone_to_cstring(text, context.temp_allocator), pos, sf.font_size, 0, rl.YELLOW)
 	}
 }
 
