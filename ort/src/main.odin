@@ -19,8 +19,8 @@ Split_Flap :: struct {
 	cols: u32,
 	rows: u32,
 	cells: [dynamic]Charset_Index,
-	cells_target: [dynamic]Charset_Index,
-	colors: [dynamic]rl.Color,
+	cell_color:  [dynamic]rl.Color,
+	cell_target: [dynamic]Charset_Index,
 	margin:  f32,
 	padding: f32,
 
@@ -36,8 +36,8 @@ Split_Flap :: struct {
 
 sf_destroy :: proc(sf: ^Split_Flap) {
 	delete(sf.cells)
-	delete(sf.cells_target)
-	delete(sf.colors)
+	delete(sf.cell_color)
+	delete(sf.cell_target)
 }
 
 sf_init :: proc(sf: ^Split_Flap, font: rl.Font, font_size: f32, allocator := context.allocator) {
@@ -49,17 +49,11 @@ sf_init :: proc(sf: ^Split_Flap, font: rl.Font, font_size: f32, allocator := con
 	sf.text_height  = text_size.y
 	sf.charset      = Split_Flap_Charset
 	sf.cells        = make([dynamic]Charset_Index, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
-	sf.cells_target = make([dynamic]Charset_Index, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
-	sf.colors       = make([dynamic]rl.Color, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
+	sf.cell_color  = make([dynamic]rl.Color, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
+	sf.cell_target = make([dynamic]Charset_Index, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
 
-	for idx in 0..<len(sf.colors) {
-		sf.colors[idx] = rl.WHITE
-	}
-}
-
-sf_rand :: proc(sf: ^Split_Flap) {
-	for i := 0; i < len(sf.cells_target); i += 1 {
-		sf.cells_target[i] = Charset_Index(rand.int_max(len(Split_Flap_Charset)))
+	for idx in 0..<len(sf.cell_color) {
+		sf.cell_color[idx] = rl.WHITE
 	}
 }
 
@@ -69,7 +63,7 @@ sf_tick :: proc(sf: ^Split_Flap, dt: f32) {
 	ttc -= dt
 	if ttc < 0 {
 		for c, idx in sf.cells {
-			if c != sf.cells_target[idx] {
+			if c != sf.cell_target[idx] {
 				new_c := 0 if c==Charset_Index(len(sf.charset)-1) else c+1
 				sf.cells[idx] = new_c
 			}
@@ -100,7 +94,7 @@ sf_render :: proc(sf: ^Split_Flap) {
 			pos,
 			sf.font_size,
 			0,
-			sf.colors[idx]
+			sf.cell_color[idx]
 		)
 	}
 }
@@ -109,7 +103,18 @@ sf_set_color :: proc(sf: ^Split_Flap, row: u32, col: u32, color: rl.Color) {
 	if col >= sf.cols || row >= sf.rows {
 		return
 	}
-	sf.colors[(row*sf.cols)+col] = color
+	sf.cell_color[(row*sf.cols)+col] = color
+}
+
+
+sf_set_text :: proc(sf: ^Split_Flap, row: u32, text: string) {
+	if row >= sf.rows {
+		return
+	}
+	for idx in 0..<min(u32(len(text)), sf.cols) {
+		char_idx := strings.index(sf.charset, text[idx:idx+1])
+		sf.cell_target[(row*sf.cols)+idx] = Charset_Index(char_idx if char_idx >= 0 else 0)
+	}
 }
 
 main :: proc() {
@@ -152,6 +157,50 @@ main :: proc() {
 		refresh_rate = 1.0 / 20.0,
 	}
 	sf_init(&sf, mono_font, 24)
+
+	curr_flight: int = 0
+	flights := []string{
+		"6104 08:14 DALLAS           C17 BOARDING",
+		" 837 08:32 CHARLOTTE        D11 BOARDING",
+		"9776 08:44 HOUSTON          C14 DELAYED ",
+		"5914 08:50 CHARLOTTE        C02 DELAYED ",
+		"8122 08:50 LOS ANGELES      F11 ON-TIME ",
+		"6402 08:55 MINNEAPOLIS      C15 DELAYED ",
+		"4048 09:00 SEATTLE          E01 BOARDING",
+		"4279 09:12 DETROIT          E10 ON-TIME ",
+		"3284 09:15 LAS VEGAS        C02 ON-TIME ",
+		"2768 09:31 NEW YORK         D06 DELAYED ",
+		"1901 10:55 HOUSTON          A07 ON-TIME ",
+		"6638 11:13 DETROIT          E05 ON-TIME ",
+		"6318 12:55 MINNEAPOLIS      D12 ON-TIME ",
+		"1138 12:57 SALT LAKE CITY   B11 DELAYED ",
+		"4933 13:13 CHARLOTTE        D06 DELAYED ",
+		"2883 13:36 BOSTON           D15 DELAYED ",
+		"4115 14:50 PHILADELPHIA     C04 DELAYED ",
+		" 520 15:17 PHILADELPHIA     E13 ON-TIME ",
+		"8152 16:12 ATLANTA          F17 ON-TIME ",
+		"7737 16:58 MINNEAPOLIS      E06 DELAYED ",
+		"2086 17:06 HOUSTON          D09 ON-TIME ",
+		" 725 17:58 HOUSTON          F15 DELAYED ",
+		"9825 18:42 CHICAGO          B05 ON-TIME ",
+		"8962 18:56 MINNEAPOLIS      D01 DELAYED ",
+		"4077 19:12 NEW YORK         F02 ON-TIME ",
+		"1996 20:03 SALT LAKE CITY   B06 DELAYED ",
+		"4079 20:12 PHILADELPHIA     D13 DELAYED ",
+		"4940 20:34 BOSTON           A11 ON-TIME ",
+		"1492 20:47 PHILADELPHIA     E08 ON-TIME ",
+		"6791 20:50 SAN DIEGO        E13 DELAYED ",
+		"5330 20:56 DETROIT          C14 ON-TIME ",
+		"3912 20:59 NEW YORK         D07 ON_TIME ",
+		"5274 21:49 PHILADELPHIA     C11 DELAYED ",
+		"9443 22:22 DENVER           D08 ON-TIME ",
+		"7786 22:37 DENVER           F18 DELAYED ",
+		"3128 23:09 SAN DIEGO        B17 ON-TIME ",
+	}
+	for curr_flight < int(sf.rows) {
+		sf_set_text(&sf, u32(curr_flight), flights[curr_flight])
+		curr_flight += 1
+	}
 	defer sf_destroy(&sf)
 
 	// time to yellow
@@ -162,7 +211,7 @@ main :: proc() {
 	}
 	// gate to yellow
 	for r in 0..<sf.rows {
-		for c in 25..=27 {
+		for c in 28..=30 {
 			sf_set_color(&sf, r, u32(c), rl.YELLOW)
 		}
 	}
@@ -171,8 +220,11 @@ main :: proc() {
 		free_all(context.temp_allocator)
 		dt := rl.GetFrameTime()
 
-		if rl.IsKeyDown(.SPACE) {
-			sf_rand(&sf)
+		if rl.IsKeyPressed(.T) {
+			for r in 0..<sf.rows {
+				sf_set_text(&sf, r, flights[curr_flight])
+				curr_flight = curr_flight+1 if curr_flight<len(flights)-1 else 0
+			}
 		}
 
 		sf_tick(&sf, dt)
