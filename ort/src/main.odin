@@ -9,7 +9,7 @@ import "core:strings"
 import "core:time"
 import rl "vendor:raylib"
 
-Split_Flap_Charset :: " ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+Split_Flap_Charset :: " ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890:"
 
 Charset_Index :: distinct u8
 
@@ -20,6 +20,7 @@ Split_Flap :: struct {
 	rows: u32,
 	cells: [dynamic]Charset_Index,
 	cells_target: [dynamic]Charset_Index,
+	colors: [dynamic]rl.Color,
 	margin:  f32,
 	padding: f32,
 
@@ -33,12 +34,13 @@ Split_Flap :: struct {
 	ttc: f32,			// Number of seconds remaining until the next cycling of characters
 }
 
-split_flap_destroy :: proc(sf: ^Split_Flap) {
+sf_destroy :: proc(sf: ^Split_Flap) {
 	delete(sf.cells)
 	delete(sf.cells_target)
+	delete(sf.colors)
 }
 
-split_flap_init :: proc(sf: ^Split_Flap, font: rl.Font, font_size: f32, allocator := context.allocator) {
+sf_init :: proc(sf: ^Split_Flap, font: rl.Font, font_size: f32, allocator := context.allocator) {
 	text_size := rl.MeasureTextEx(font, "Y", font_size, 0)
 
 	sf.font         = font
@@ -48,17 +50,20 @@ split_flap_init :: proc(sf: ^Split_Flap, font: rl.Font, font_size: f32, allocato
 	sf.charset      = Split_Flap_Charset
 	sf.cells        = make([dynamic]Charset_Index, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
 	sf.cells_target = make([dynamic]Charset_Index, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
+	sf.colors       = make([dynamic]rl.Color, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
 
-	split_flap_rand(sf)
+	for idx in 0..<len(sf.colors) {
+		sf.colors[idx] = rl.WHITE
+	}
 }
 
-split_flap_rand :: proc(sf: ^Split_Flap) {
+sf_rand :: proc(sf: ^Split_Flap) {
 	for i := 0; i < len(sf.cells_target); i += 1 {
 		sf.cells_target[i] = Charset_Index(rand.int_max(len(Split_Flap_Charset)))
 	}
 }
 
-split_flap_tick :: proc(sf: ^Split_Flap, dt: f32) {
+sf_tick :: proc(sf: ^Split_Flap, dt: f32) {
 	using sf
 
 	ttc -= dt
@@ -73,15 +78,13 @@ split_flap_tick :: proc(sf: ^Split_Flap, dt: f32) {
 	}
 }
 
-split_flap_render :: proc(sf: ^Split_Flap) {
+sf_render :: proc(sf: ^Split_Flap) {
 	dim := rl.Vector2{
 		sf.margin*2 + f32(sf.cols)*sf.text_width  + sf.padding*f32(sf.cols-1),
 		sf.margin*2 + f32(sf.rows)*sf.text_height + sf.padding*f32(sf.rows-1),
 	}
 
 	rl.DrawRectangleV(sf.pos, dim, rl.DARKGRAY)
-
-	pos := sf.pos + rl.Vector2{sf.margin, sf.margin}
 	for c, idx in sf.cells {
 		row := u32(idx) / sf.cols
 		col := u32(idx) % sf.cols
@@ -91,9 +94,22 @@ split_flap_render :: proc(sf: ^Split_Flap) {
 		}
 		rl.DrawRectangleV(pos, rl.Vector2{sf.text_width, sf.text_height}, rl.BLACK)
 		char_idx := sf.cells[idx]
-		text: string = sf.charset[char_idx:char_idx+1]
-		rl.DrawTextEx(sf.font, strings.clone_to_cstring(text, context.temp_allocator), pos, sf.font_size, 0, rl.YELLOW)
+		rl.DrawTextEx(
+			sf.font,
+			strings.clone_to_cstring(sf.charset[char_idx:char_idx+1], context.temp_allocator),
+			pos,
+			sf.font_size,
+			0,
+			sf.colors[idx]
+		)
 	}
+}
+
+sf_set_color :: proc(sf: ^Split_Flap, row: u32, col: u32, color: rl.Color) {
+	if col >= sf.cols || row >= sf.rows {
+		return
+	}
+	sf.colors[(row*sf.cols)+col] = color
 }
 
 main :: proc() {
@@ -135,23 +151,36 @@ main :: proc() {
 		padding = 5,
 		refresh_rate = 1.0 / 20.0,
 	}
-	split_flap_init(&sf, mono_font, 24)
-	defer split_flap_destroy(&sf)
+	sf_init(&sf, mono_font, 24)
+	defer sf_destroy(&sf)
+
+	// time to yellow
+	for r in 0..<sf.rows {
+		for c in 5..=9 {
+			sf_set_color(&sf, r, u32(c), rl.YELLOW)
+		}
+	}
+	// gate to yellow
+	for r in 0..<sf.rows {
+		for c in 25..=27 {
+			sf_set_color(&sf, r, u32(c), rl.YELLOW)
+		}
+	}
 
     for !rl.WindowShouldClose() {
 		free_all(context.temp_allocator)
 		dt := rl.GetFrameTime()
 
 		if rl.IsKeyDown(.SPACE) {
-			split_flap_rand(&sf)
+			sf_rand(&sf)
 		}
 
-		split_flap_tick(&sf, dt)
+		sf_tick(&sf, dt)
 
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.SKYBLUE)
 
-		split_flap_render(&sf)
+		sf_render(&sf)
 
 		rl.EndDrawing()
 	}
