@@ -90,7 +90,7 @@ sf_render :: proc(sf: ^Split_Flap) {
 		sf.margin*2 + f32(sf.rows)*sf.text_height + sf.padding*f32(sf.rows-1),
 	}
 
-	rl.DrawRectangleV(sf.pos, dim, rl.DARKGRAY)
+	rl.DrawRectangleV(sf.pos, dim, rl.BLACK)
 	for c, idx in sf.cells {
 		row := u32(idx) / sf.cols
 		col := u32(idx) % sf.cols
@@ -98,7 +98,6 @@ sf_render :: proc(sf: ^Split_Flap) {
 			sf.pos.x + sf.margin + (f32(col)*sf.text_width  + f32(col)*sf.padding),
 			sf.pos.y + sf.margin + (f32(row)*sf.text_height + f32(row)*sf.padding),
 		}
-		rl.DrawRectangleV(pos, rl.Vector2{sf.text_width, sf.text_height}, rl.BLACK)
 		char_idx := sf.cells[idx]
 		char := sf.charsets[sf.cell_charset[idx]][char_idx:char_idx+1]
 		rl.DrawTextEx(
