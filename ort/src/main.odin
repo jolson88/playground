@@ -51,6 +51,15 @@ sf_init :: proc(sf: ^Split_Flap, font: rl.Font, size: rl.Vector2, allocator := c
 	sf.text_width   = math.floor_f32(width_rem / f32(sf.cols))
 	sf.text_height  = sf.text_width*2
 
+	est_rows: u32 = 1
+	height := sf.margin*2 + sf.text_height
+	for height < size.y {
+		fmt.println(height)
+		est_rows += 1
+		height += sf.text_height + sf.padding
+	}
+	sf.rows = est_rows
+
 	sf.cells        = make([dynamic]Charset_Index, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
 	sf.cell_charset = make([dynamic]Split_Flap_Charset, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
 	sf.cell_color   = make([dynamic]rl.Color, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
@@ -167,7 +176,6 @@ main :: proc() {
 
 	sf := Split_Flap{
 		cols = 40,
-		rows = 12,
 		margin = 10,
 		padding = 5,
 		refresh_rate = 1.0 / 20.0,
