@@ -18,8 +18,6 @@ Split_Flap_Charset :: enum {
 }
 
 Split_Flap :: struct {
-	pos:  rl.Vector2,
-
 	cols: u32,
 	rows: u32,
 	cells:        [dynamic]Charset_Index,
@@ -30,7 +28,6 @@ Split_Flap :: struct {
 	padding: f32,
 
 	font: rl.Font,
-	font_size:   f32,
 	text_width:  f32,
 	text_height: f32,
 	charsets:    map[Split_Flap_Charset]string,
@@ -47,13 +44,13 @@ sf_destroy :: proc(sf: ^Split_Flap) {
 	delete(sf.charsets)
 }
 
-sf_init :: proc(sf: ^Split_Flap, font: rl.Font, font_size: f32, allocator := context.allocator) {
-	text_size := rl.MeasureTextEx(font, "Y", font_size, 0)
-
+sf_init :: proc(sf: ^Split_Flap, font: rl.Font, size: rl.Vector2, allocator := context.allocator) {
+	space_width := sf.margin*2 + sf.padding*f32(sf.cols-1)
+	width_rem   := size.x - space_width
 	sf.font         = font
-	sf.font_size    = font_size
-	sf.text_width   = text_size.x
-	sf.text_height  = text_size.y
+	sf.text_width   = math.floor_f32(width_rem / f32(sf.cols))
+	sf.text_height  = sf.text_width*2
+
 	sf.cells        = make([dynamic]Charset_Index, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
 	sf.cell_charset = make([dynamic]Split_Flap_Charset, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
 	sf.cell_color   = make([dynamic]rl.Color, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
@@ -84,27 +81,27 @@ sf_tick :: proc(sf: ^Split_Flap, dt: f32) {
 	}
 }
 
-sf_render :: proc(sf: ^Split_Flap) {
+sf_render :: proc(sf: ^Split_Flap, pos: rl.Vector2) {
 	dim := rl.Vector2{
 		sf.margin*2 + f32(sf.cols)*sf.text_width  + sf.padding*f32(sf.cols-1),
 		sf.margin*2 + f32(sf.rows)*sf.text_height + sf.padding*f32(sf.rows-1),
 	}
 
-	rl.DrawRectangleV(sf.pos, dim, rl.BLACK)
+	rl.DrawRectangleV(pos, dim, rl.BLACK)
 	for c, idx in sf.cells {
 		row := u32(idx) / sf.cols
 		col := u32(idx) % sf.cols
-		pos := rl.Vector2{
-			sf.pos.x + sf.margin + (f32(col)*sf.text_width  + f32(col)*sf.padding),
-			sf.pos.y + sf.margin + (f32(row)*sf.text_height + f32(row)*sf.padding),
+		render_pos := rl.Vector2{
+			pos.x + sf.margin + (f32(col)*sf.text_width  + f32(col)*sf.padding),
+			pos.y + sf.margin + (f32(row)*sf.text_height + f32(row)*sf.padding),
 		}
 		char_idx := sf.cells[idx]
 		char := sf.charsets[sf.cell_charset[idx]][char_idx:char_idx+1]
 		rl.DrawTextEx(
 			sf.font,
 			strings.clone_to_cstring(char, context.temp_allocator),
-			pos,
-			sf.font_size,
+			render_pos,
+			sf.text_height,
 			0,
 			sf.cell_color[idx]
 		)
@@ -169,14 +166,13 @@ main :: proc() {
 	defer rl.UnloadFont(mono_font)
 
 	sf := Split_Flap{
-		pos  = rl.Vector2{20, 20},
 		cols = 40,
 		rows = 12,
 		margin = 10,
 		padding = 5,
 		refresh_rate = 1.0 / 20.0,
 	}
-	sf_init(&sf, mono_font, 24)
+	sf_init(&sf, mono_font, rl.Vector2{695, 363})
 
 	curr_flight: int = 0
 	flights := []string{
@@ -264,7 +260,7 @@ main :: proc() {
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.SKYBLUE)
 
-		sf_render(&sf)
+		sf_render(&sf, rl.Vector2{20, 20})
 
 		rl.EndDrawing()
 	}
