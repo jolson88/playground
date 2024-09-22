@@ -9,18 +9,23 @@ import "core:strings"
 import "core:time"
 import rl "vendor:raylib"
 
-Split_Flap_Charset :: " ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890:"
-
 Charset_Index :: distinct u8
+
+Split_Flap_Charset :: enum {
+	Default = 0,
+	Alpha,
+	Numeric,
+}
 
 Split_Flap :: struct {
 	pos:  rl.Vector2,
 
 	cols: u32,
 	rows: u32,
-	cells: [dynamic]Charset_Index,
-	cell_color:  [dynamic]rl.Color,
-	cell_target: [dynamic]Charset_Index,
+	cells:        [dynamic]Charset_Index,
+	cell_charset: [dynamic]Split_Flap_Charset,
+	cell_color:   [dynamic]rl.Color,
+	cell_target:  [dynamic]Charset_Index,
 	margin:  f32,
 	padding: f32,
 
@@ -28,7 +33,7 @@ Split_Flap :: struct {
 	font_size:   f32,
 	text_width:  f32,
 	text_height: f32,
-	charset: string,
+	charsets:    map[Split_Flap_Charset]string,
 
 	refresh_rate: f32, 	// Number of seconds to elapse between cycles / character advancements
 	ttc: f32,			// Number of seconds remaining until the next cycling of characters
@@ -36,8 +41,10 @@ Split_Flap :: struct {
 
 sf_destroy :: proc(sf: ^Split_Flap) {
 	delete(sf.cells)
+	delete(sf.cell_charset)
 	delete(sf.cell_color)
 	delete(sf.cell_target)
+	delete(sf.charsets)
 }
 
 sf_init :: proc(sf: ^Split_Flap, font: rl.Font, font_size: f32, allocator := context.allocator) {
@@ -47,10 +54,15 @@ sf_init :: proc(sf: ^Split_Flap, font: rl.Font, font_size: f32, allocator := con
 	sf.font_size    = font_size
 	sf.text_width   = text_size.x
 	sf.text_height  = text_size.y
-	sf.charset      = Split_Flap_Charset
 	sf.cells        = make([dynamic]Charset_Index, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
-	sf.cell_color  = make([dynamic]rl.Color, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
-	sf.cell_target = make([dynamic]Charset_Index, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
+	sf.cell_charset = make([dynamic]Split_Flap_Charset, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
+	sf.cell_color   = make([dynamic]rl.Color, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
+	sf.cell_target  = make([dynamic]Charset_Index, sf.cols*sf.rows, sf.cols*sf.rows, allocator)
+	sf.charsets     = map[Split_Flap_Charset]string{
+		Split_Flap_Charset.Default = " ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890:",
+		Split_Flap_Charset.Alpha   = " ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+		Split_Flap_Charset.Numeric = " 1234567890:,.",
+	}
 
 	for idx in 0..<len(sf.cell_color) {
 		sf.cell_color[idx] = rl.WHITE
@@ -64,7 +76,7 @@ sf_tick :: proc(sf: ^Split_Flap, dt: f32) {
 	if ttc < 0 {
 		for c, idx in sf.cells {
 			if c != sf.cell_target[idx] {
-				new_c := 0 if c==Charset_Index(len(sf.charset)-1) else c+1
+				new_c := 0 if c==Charset_Index(len(sf.charsets[sf.cell_charset[idx]])-1) else c+1
 				sf.cells[idx] = new_c
 			}
 		}
@@ -88,15 +100,23 @@ sf_render :: proc(sf: ^Split_Flap) {
 		}
 		rl.DrawRectangleV(pos, rl.Vector2{sf.text_width, sf.text_height}, rl.BLACK)
 		char_idx := sf.cells[idx]
+		char := sf.charsets[sf.cell_charset[idx]][char_idx:char_idx+1]
 		rl.DrawTextEx(
 			sf.font,
-			strings.clone_to_cstring(sf.charset[char_idx:char_idx+1], context.temp_allocator),
+			strings.clone_to_cstring(char, context.temp_allocator),
 			pos,
 			sf.font_size,
 			0,
 			sf.cell_color[idx]
 		)
 	}
+}
+
+sf_set_charset :: proc(sf: ^Split_Flap, row: u32, col: u32, charset: Split_Flap_Charset) {
+	if col >= sf.cols || row >= sf.rows {
+		return
+	}
+	sf.cell_charset[(row*sf.cols)+col] = charset
 }
 
 sf_set_color :: proc(sf: ^Split_Flap, row: u32, col: u32, color: rl.Color) {
@@ -112,8 +132,9 @@ sf_set_text :: proc(sf: ^Split_Flap, row: u32, text: string) {
 		return
 	}
 	for idx in 0..<min(u32(len(text)), sf.cols) {
-		char_idx := strings.index(sf.charset, text[idx:idx+1])
-		sf.cell_target[(row*sf.cols)+idx] = Charset_Index(char_idx if char_idx >= 0 else 0)
+		cell_idx := (row*sf.cols)+idx
+		char_idx := strings.index(sf.charsets[sf.cell_charset[cell_idx]], text[idx:idx+1])
+		sf.cell_target[cell_idx] = Charset_Index(char_idx if char_idx >= 0 else 0)
 	}
 }
 
@@ -197,23 +218,35 @@ main :: proc() {
 		"7786 22:37 DENVER           F18 DELAYED ",
 		"3128 23:09 SAN DIEGO        B17 ON-TIME ",
 	}
+	defer sf_destroy(&sf)
+
+	for r in 0..<sf.rows {
+		// flight number
+		for c in 0..=3 {
+			sf_set_charset(&sf, r, u32(c), .Numeric)
+		}
+		// time
+		for c in 5..=9 {
+			sf_set_charset(&sf, r, u32(c), .Numeric)
+			sf_set_color(&sf, r, u32(c), rl.YELLOW)
+		}
+		// destination
+		for c in 11..=26 {
+			sf_set_charset(&sf, r, u32(c), .Alpha)
+		}
+		// gate
+		for c in 28..=30 {
+			sf_set_color(&sf, r, u32(c), rl.YELLOW)
+			sf_set_charset(&sf, r, u32(c), .Alpha if c==28 else .Numeric)
+		}
+		// status
+		for c in 32..=39 {
+			sf_set_charset(&sf, r, u32(c), .Alpha)
+		}
+	}
 	for curr_flight < int(sf.rows) {
 		sf_set_text(&sf, u32(curr_flight), flights[curr_flight])
 		curr_flight += 1
-	}
-	defer sf_destroy(&sf)
-
-	// time to yellow
-	for r in 0..<sf.rows {
-		for c in 5..=9 {
-			sf_set_color(&sf, r, u32(c), rl.YELLOW)
-		}
-	}
-	// gate to yellow
-	for r in 0..<sf.rows {
-		for c in 28..=30 {
-			sf_set_color(&sf, r, u32(c), rl.YELLOW)
-		}
 	}
 
     for !rl.WindowShouldClose() {
