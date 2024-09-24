@@ -169,7 +169,7 @@ main :: proc() {
 
 	src_dir   := filepath.dir(#file, context.temp_allocator)
     font_path := filepath.join([]string{src_dir, "resources", "fonts", "DroidSansMono.ttf"}, context.temp_allocator)
-	mono_font := rl.LoadFont(strings.clone_to_cstring(font_path, context.temp_allocator))
+	mono_font := rl.LoadFontEx(strings.clone_to_cstring(font_path, context.temp_allocator), 48, nil, 0)
 	defer rl.UnloadFont(mono_font)
 
 	sf: Split_Flap
